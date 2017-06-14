@@ -38,6 +38,10 @@ import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.peak.salut.Salut;
+import com.peak.salut.SalutDataReceiver;
+import com.peak.salut.SalutServiceData;
+
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 
@@ -45,6 +49,7 @@ public class CalibrationWifiGuest extends MainActivity implements PropertyChange
 
     private boolean mIsBound = false;
     private CalibrationService calibrationService;
+    private Salut network;
     private ImageView connectionStatusImage;
     private TextView textStatus;
     private TextView textDeviceName;
@@ -80,12 +85,13 @@ public class CalibrationWifiGuest extends MainActivity implements PropertyChange
                     (CalibrationService.CALIBRATION_STATE)event.getNewValue();
             CalibrationWifiHost.applyStateChange(newState, connectionStatusImage, textStatus);
         } else if(CalibrationService.PROP_P2P_DEVICE.equals(event.getPropertyName())) {
-            WifiP2pDevice p2pDevice = calibrationService.getWifiP2pDevice();
+            /* WifiP2pDevice p2pDevice = calibrationService.getWifiP2pDevice();
             if(p2pDevice != null) {
                 textDeviceName.setText(p2pDevice.deviceName);
             } else {
                 textDeviceName.setText("");
             }
+            */
         }
     }
 
@@ -94,6 +100,7 @@ public class CalibrationWifiGuest extends MainActivity implements PropertyChange
             calibrationService = ((CalibrationService.LocalBinder)service).getService();
             CalibrationWifiHost.applyStateChange(calibrationService.getState(), connectionStatusImage, textStatus);
             calibrationService.addPropertyChangeListener(CalibrationWifiGuest.this);
+            calibrationService.setNetwork(new Salut(new SalutDataReceiver(CalibrationWifiGuest.this, calibrationService),new SalutServiceData(CalibrationService.SERVICE_NAME, CalibrationService.SERVICE_PORT, android.os.Build.MODEL),calibrationService));
             calibrationService.init();
         }
 

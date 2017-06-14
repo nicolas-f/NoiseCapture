@@ -27,6 +27,7 @@
 
 package org.noise_planet.noisecapture;
 
+import android.app.Activity;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -50,6 +51,12 @@ import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.widget.Toast;
 
+import com.peak.salut.Callbacks.SalutCallback;
+import com.peak.salut.Callbacks.SalutDataCallback;
+import com.peak.salut.Salut;
+import com.peak.salut.SalutDataReceiver;
+import com.peak.salut.SalutServiceData;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,8 +74,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * phone GUI is in sleep mode.
  */
 public class CalibrationService extends Service implements PropertyChangeListener,
-        SharedPreferences.OnSharedPreferenceChangeListener {
+        SharedPreferences.OnSharedPreferenceChangeListener, SalutDataCallback {
     public static final String EXTRA_HOST = "MODE_HOST";
+    public static final String SERVICE_NAME= "NoiseCapture";
+    public static final int SERVICE_PORT = 4242;
     public final AtomicBoolean queryRegisterWifiP2PService = new AtomicBoolean(false);
 
     // properties
@@ -81,7 +90,7 @@ public class CalibrationService extends Service implements PropertyChangeListene
 
 
     private final IntentFilter intentFilter = new IntentFilter();
-    private WifiP2pDevice wifiP2pDevice;
+
     private int defaultWarmupTime;
     private int defaultCalibrationTime;
     private static final Logger LOGGER = LoggerFactory.getLogger(CalibrationService.class);
@@ -105,6 +114,11 @@ public class CalibrationService extends Service implements PropertyChangeListene
         WAITING_FOR_APPLY_OR_CANCEL,// Calibration is done,guest send stored leqs, waiting for the validation of gain,
         CANCEL_IN_PROGRESS,         // Canceled but waiting for timer to stop. Next state is AWAITING_START
     }
+
+    SalutDataReceiver dataReceiver;
+    SalutServiceData serviceData;
+    // WifiDirect manager
+    Salut network;
 
     private static final String messageSeparator = "|";
     private static final String messagePingArgument = "CHECK";
@@ -187,10 +201,10 @@ public class CalibrationService extends Service implements PropertyChangeListene
      */
     public void init() {
         LOGGER.info("CalibrationService.init");
-        WifiManager wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-        if(!wifi.isWifiEnabled()) {
-            wifi.setWifiEnabled(true);
-        }
+        //WifiManager wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+        //if(!wifi.isWifiEnabled()) {
+        //    wifi.setWifiEnabled(true);
+        //}
     }
 
     @Override
@@ -231,15 +245,6 @@ public class CalibrationService extends Service implements PropertyChangeListene
         }
     };
 
-    public void setWifiP2pDevice(WifiP2pDevice wifiP2pDevice) {
-        this.wifiP2pDevice = wifiP2pDevice;
-        listeners.firePropertyChange(PROP_P2P_DEVICE, null, wifiP2pDevice);
-    }
-
-    public WifiP2pDevice getWifiP2pDevice() {
-        return wifiP2pDevice;
-    }
-
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
@@ -261,6 +266,14 @@ public class CalibrationService extends Service implements PropertyChangeListene
 
     public void addPropertyChangeListener(PropertyChangeListener propertyChangeListener) {
         listeners.addPropertyChangeListener(propertyChangeListener);
+    }
+
+    /**
+     * Set the Salut instance created from the activity
+     * @param network Salut instance
+     */
+    public void setNetwork(Salut network) {
+        this.network = network;
     }
 
     public void startCalibration() {
@@ -370,7 +383,12 @@ public class CalibrationService extends Service implements PropertyChangeListene
         //buildMessage(ID_PING,messagePingArgument));
     }
 
-   /*
+    @Override
+    public void onDataReceived(Object o) {
+
+    }
+
+    /*
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             LOGGER.info(action.toUpperCase() + " " + intent.toString());
@@ -500,6 +518,15 @@ public class CalibrationService extends Service implements PropertyChangeListene
                 service.onTimerEnd();
             }
             return true;
+        }
+    }
+
+    private static final class DeviceNotSupportedCallback implements SalutCallback {
+        @Override
+        public void call() {
+            // wiFiFailureDiag.show();
+            // OR
+            Log.e(TAG, "Sorry, but this device does not support WiFi Direct.");
         }
     }
 }
