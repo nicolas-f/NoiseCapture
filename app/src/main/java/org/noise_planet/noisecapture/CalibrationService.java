@@ -58,13 +58,9 @@ import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.nio.charset.Charset;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import edu.rit.se.wifibuddy.CommunicationManager;
-import edu.rit.se.wifibuddy.DnsSdService;
-import edu.rit.se.wifibuddy.WifiDirectHandler;
 
 /**
  * This service allow to be the host or the guest to an automated calibration while the android
@@ -160,26 +156,12 @@ public class CalibrationService extends Service implements PropertyChangeListene
 
     // Other resources
     private boolean measurementIsBound = false;
-    private boolean wifiDirectHandlerBound = false;
     private boolean isHost = false;
 
     private MeasurementService measurementService;
-    private WifiDirectHandler wifiDirectHandler;
-    private BroadcastReceiver receiver = null;
-
 
     @Override
     public void onCreate() {
-        intentFilter.addAction(WifiDirectHandler.Action.SERVICE_CONNECTED);
-        intentFilter.addAction(WifiDirectHandler.Action.MESSAGE_RECEIVED);
-        intentFilter.addAction(WifiDirectHandler.Action.DEVICE_CHANGED);
-        intentFilter.addAction(WifiDirectHandler.Action.WIFI_STATE_CHANGED);
-        intentFilter.addAction(WifiDirectHandler.Action.DNS_SD_SERVICE_AVAILABLE);
-        intentFilter.addAction(WifiDirectHandler.Action.DNS_SD_TXT_RECORD_AVAILABLE);
-        intentFilter.addAction(WifiDirectHandler.Action.PEERS_CHANGED);
-        receiver = new CalibrationWifiBroadcastReceiver(this);
-        LocalBroadcastManager.getInstance(this).registerReceiver(receiver, intentFilter);
-        registerReceiver(receiver, intentFilter);
 
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         sharedPref.registerOnSharedPreferenceChangeListener(this);
@@ -209,46 +191,13 @@ public class CalibrationService extends Service implements PropertyChangeListene
         if(!wifi.isWifiEnabled()) {
             wifi.setWifiEnabled(true);
         }
-        Intent intent = new Intent(this, WifiDirectHandler.class);
-        bindService(intent, wifiServiceConnection, BIND_AUTO_CREATE);
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        unregisterReceiver(receiver);
         doUnbindService();
     }
-
-    private ServiceConnection wifiServiceConnection = new ServiceConnection() {
-
-        /**
-         * Called when a connection to the Service has been established, with the IBinder of the
-         * communication channel to the Service.
-         * @param name The component name of the service that has been connected
-         * @param service The IBinder of the Service's communication channel
-         */
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            WifiDirectHandler.WifiTesterBinder binder = (WifiDirectHandler.WifiTesterBinder) service;
-            LOGGER.info("wifiDirectHandler bound ");
-            wifiDirectHandler = binder.getService();
-            CalibrationService.this.wifiDirectHandlerBound = true;
-        }
-
-        /**
-         * Called when a connection to the Service has been lost.  This typically
-         * happens when the process hosting the service has crashed or been killed.
-         * This does not remove the ServiceConnection itself -- this
-         * binding to the service will remain active, and you will receive a call
-         * to onServiceConnected when the Service is next running.
-         */
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            LOGGER.info("wifiDirectHandler unbound ");
-            CalibrationService.this.wifiDirectHandlerBound = false;
-        }
-    };
 
     private ServiceConnection measureConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, IBinder service) {
@@ -316,14 +265,8 @@ public class CalibrationService extends Service implements PropertyChangeListene
 
     public void startCalibration() {
         if(CALIBRATION_STATE.AWAITING_START.equals(state) && isHost) {
-            CommunicationManager communicationManager = wifiDirectHandler.getCommunicationManager();
-            if(communicationManager != null) {
-                communicationManager.write(buildMessage(ID_START_CALIBRATION, defaultWarmupTime,
-                        defaultCalibrationTime));
-                setState(CALIBRATION_STATE.WARMUP);
-            } else {
-                LOGGER.error("Communication manager is null");
-            }
+            //buildMessage(ID_START_CALIBRATION, defaultWarmupTime, defaultCalibrationTime));
+            setState(CALIBRATION_STATE.WARMUP);
         }
     }
 
@@ -349,11 +292,6 @@ public class CalibrationService extends Service implements PropertyChangeListene
     }
 
     private void handleMessage(String message) {
-        CommunicationManager communicationManager = wifiDirectHandler.getCommunicationManager();
-        if(communicationManager == null) {
-            LOGGER.error("Receive: "+message+", but communication manager is null");
-            return;
-        }
         if(message == null) {
             LOGGER.error("Receive null message");
             return;
@@ -367,8 +305,7 @@ public class CalibrationService extends Service implements PropertyChangeListene
                 case ID_PING:
                     // Peer receive ping
                     if (messagePingArgument.equals(stringTokenizer.nextToken())) {
-                        communicationManager.write(buildMessage(ID_PONG, messagePingArgument,
-                                wifiP2pDevice.deviceAddress));
+                        //buildMessage(ID_PONG, messagePingArgument, wifiP2pDevice.deviceAddress));
                         setState(CALIBRATION_STATE.AWAITING_START);
                     }
                     break;
@@ -417,41 +354,23 @@ public class CalibrationService extends Service implements PropertyChangeListene
             // Detach our existing connection.
             unbindService(measureConnection);
         }
-        if(wifiDirectHandlerBound) {
-            unbindService(wifiServiceConnection);
-        }
     }
     public CALIBRATION_STATE getState() {
         return state;
     }
 
     private void addLocalWifiService() {
-        if(wifiDirectHandler != null && wifiDirectHandler.getThisDevice() != null) {
-            HashMap<String, String> record = new HashMap<>();
-            record.put("Name", wifiDirectHandler.getThisDevice().deviceName);
-            record.put("Address", wifiDirectHandler.getThisDevice().deviceAddress);
-            wifiDirectHandler.addLocalService(NOISECAPTURE_CALIBRATION_SERVICE, record);
-        }
+        //HashMap<String, String> record = new HashMap<>();
+        //record.put("Name", wifiDirectHandler.getThisDevice().deviceName);
+        //record.put("Address", wifiDirectHandler.getThisDevice().deviceAddress);
+        //addLocalService(NOISECAPTURE_CALIBRATION_SERVICE, record
     }
 
     protected void initiateCommunication() {
-        CommunicationManager communicationManager = wifiDirectHandler.getCommunicationManager();
-        if(communicationManager != null) {
-            communicationManager.write(buildMessage(ID_PING,messagePingArgument));
-        } else {
-            LOGGER.error("Communication manager is null");
-        }
+        //buildMessage(ID_PING,messagePingArgument));
     }
 
-    private static class CalibrationWifiBroadcastReceiver extends BroadcastReceiver {
-        CalibrationService calibrationService;
-        private long lastServiceRegistering = 0;
-
-        public CalibrationWifiBroadcastReceiver(CalibrationService calibrationService) {
-            this.calibrationService = calibrationService;
-        }
-
-        @Override
+   /*
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             LOGGER.info(action.toUpperCase() + " " + intent.toString());
@@ -547,7 +466,7 @@ public class CalibrationService extends Service implements PropertyChangeListene
             }
         }
     }
-
+    */
 
 
     /**
