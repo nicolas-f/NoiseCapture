@@ -38,6 +38,7 @@ import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.peak.salut.Callbacks.SalutCallback;
 import com.peak.salut.Salut;
 import com.peak.salut.SalutDataReceiver;
 import com.peak.salut.SalutServiceData;
@@ -100,7 +101,13 @@ public class CalibrationWifiGuest extends MainActivity implements PropertyChange
             calibrationService = ((CalibrationService.LocalBinder)service).getService();
             CalibrationWifiHost.applyStateChange(calibrationService.getState(), connectionStatusImage, textStatus);
             calibrationService.addPropertyChangeListener(CalibrationWifiGuest.this);
-            calibrationService.setNetwork(new Salut(new SalutDataReceiver(CalibrationWifiGuest.this, calibrationService),new SalutServiceData(CalibrationService.SERVICE_NAME, CalibrationService.SERVICE_PORT, android.os.Build.MODEL),calibrationService));
+            CalibrationWifiGuest.this.network = new Salut(new SalutDataReceiver(CalibrationWifiGuest.this, calibrationService), new SalutServiceData(CalibrationService.SERVICE_NAME, CalibrationService.SERVICE_PORT, android.os.Build.MODEL), new SalutCallback() {
+                @Override
+                public void call() {
+                    textStatus.setText(R.string.calibration_status_p2p_error);
+                }
+            });
+            calibrationService.setNetwork(CalibrationWifiGuest.this.network);
             calibrationService.init();
         }
 

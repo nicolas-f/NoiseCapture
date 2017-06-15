@@ -520,13 +520,4 @@ public class CalibrationService extends Service implements PropertyChangeListene
             return true;
         }
     }
-
-    private static final class DeviceNotSupportedCallback implements SalutCallback {
-        @Override
-        public void call() {
-            // wiFiFailureDiag.show();
-            // OR
-            Log.e(TAG, "Sorry, but this device does not support WiFi Direct.");
-        }
-    }
 }
