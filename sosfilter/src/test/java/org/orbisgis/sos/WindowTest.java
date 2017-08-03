@@ -88,6 +88,12 @@ public class WindowTest {
         assertEquals("Deviation of " + err + "\nExpected: \n" + Arrays.toString(expectedLeq) + "\nGot:\n" + Arrays.toString(normalisedDbResult), 0, err, maximalDeviation);
     }
 
+    private float[] testFFTNoWindow(short[] signal, int sampleRate, double dbFsReference) {
+        FFTSignalProcessing fftSignalProcessing = new FFTSignalProcessing(sampleRate, STANDARD_FREQUENCIES_UNITTEST, signal.length, dbFsReference);
+        fftSignalProcessing.addSample(signal);
+        FFTSignalProcessing.ProcessingResult result = fftSignalProcessing.processSample(false, false, false);
+        return result.getdBaLevels();
+    }
     private float[] testFFTWindow(short[] signal, int sampleRate, double windowTime, Window.WINDOW_TYPE windowType, double dbFsReference) {
         Window window = new Window(windowType, sampleRate,
                 STANDARD_FREQUENCIES_UNITTEST, windowTime, false, dbFsReference, false);
@@ -124,6 +130,13 @@ public class WindowTest {
                 new FFTSignalProcessing.ProcessingResult((signal.length / sampleRate) / windowTime, res.toArray(new FFTSignalProcessing.ProcessingResult[res.size()]));
 
         return fullSampleResult.getdBaLevels();
+    }
+
+    public void printResult(String fileName, String label, float[] result) {
+        System.out.println(fileName+"  "+label);
+        for(int idfreq = 0; idfreq < result.length; idfreq++) {
+            System.out.println(result[idfreq]);
+        }
     }
 
     @Test
@@ -188,5 +201,46 @@ public class WindowTest {
         //        }
         //        dBError = 0.;
         //        checkSplSpectrum(refSpl, sosBands, 0, dBError);
+    }
+
+
+
+    @Test
+    public void testTraffic() throws IOException {
+        final int sampleRate = 44100;
+        double p0 = 32767.;
+        double dbFsReference = -20 * Math.log10(p0);
+        String[] files = new String[] {"sample1_30sec_raw_signed_16bits_PCM.raw",
+                "sample2_30sec_raw_signed_16bits_PCM.raw",
+                "sample3_2sec_raw_signed_16bits_PCM.raw",
+                "sample4_2sec_raw_signed_16bits_PCM.raw",
+                "sample5_2sec_raw_signed_16bits_PCM.raw"};
+        for(String fileName : files) {
+            // Test error induced by window overlapping
+            // Read input signal
+            InputStream inputStream = WindowTest.class.getResourceAsStream(fileName);
+            short[] signal = SOSSignalProcessing.loadShortStream(inputStream, ByteOrder.LITTLE_ENDIAN);
+            // Reference value from ITA Toolbox
+
+            // Test FFT without cutting
+            FFTSignalProcessing fftSignalProcessing =
+                    new FFTSignalProcessing(sampleRate, ThirdOctaveBandsFiltering.STANDARD_FREQUENCIES_REDUCED, signal.length, dbFsReference);
+            fftSignalProcessing.addSample(signal);
+            FFTSignalProcessing.ProcessingResult processingResult = fftSignalProcessing.processSample(false, false, false);
+
+            double globalLeq = fftSignalProcessing.computeGlobalLeq();
+
+            // Test FFT windows
+
+            printResult(fileName,"HANN 0.125", testFFTWindow(signal, sampleRate, 0.125, Window.WINDOW_TYPE.HANN, dbFsReference));
+
+            printResult(fileName, "RECTANGULAR 0.125", testFFTWindow(signal, sampleRate, 0.125, Window.WINDOW_TYPE.RECTANGULAR, dbFsReference));
+
+            printResult(fileName,"HANN 1s", testFFTWindow(signal, sampleRate, 1., Window.WINDOW_TYPE.HANN, dbFsReference));
+
+            printResult(fileName, "RECTANGULAR 1s", testFFTWindow(signal, sampleRate, 1., Window.WINDOW_TYPE.RECTANGULAR, dbFsReference));
+
+            printResult(fileName, "NO_WINDOW", testFFTNoWindow(signal, sampleRate, dbFsReference));
+        }
     }
 }
