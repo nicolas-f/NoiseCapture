@@ -27,7 +27,7 @@
                 <li><a href="#home" role="tab"><i class="fa fa-home"></i></a></li>
                 <li><a href="#hexainfo" role="tab"><i class="fa fa-pie-chart"></i></a></li>
                 <li><a href="#history" role="tab" onclick="doHistoRefresh()"><i class="fa fa-history"></i></a></li>
-                <li class="disabled"><a href="#statistics" role="tab"><i class="fa fa-line-chart"></i></a></li>
+                <li><a href="#statistics" role="tab"  onclick="loadStatistics()"><i class="fa fa-line-chart"></i></a></li>
             </ul>
             <ul role="tablist">
                 <li class="disabled">
@@ -72,8 +72,12 @@
                 <div id="measures_log"></div>
             </div>
             <div class="sidebar-pane" id="statistics">
-                <h1 class="sidebar-header">Statistics<span class="sidebar-close"><i class="fa fa-line-chart"></i></span></h1>
+                <h1 class="sidebar-header">Statistics<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
                 <h3>Measurement information</h3>
+                    <div style="height: 300">
+                      <canvas id="statistics_content"></canvas>
+                    </div>
+
             </div>
             <div class="sidebar-pane" id="about">
                 <h1 class="sidebar-header">About<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
@@ -294,6 +298,7 @@ The authors are not responsible for the direct or indirect consequences of the u
     <script src="js/leaflet.wms.js"></script>
     <script src="js/leaflet-search.min.js"></script>
     <script src="js/moment-with-locales.min.js"></script>
+    <script src="js/Chart.min.js"></script>
     <script src="js/leaflet.awesome-markers.min.js"></script>
     <script src="js/bootstrap.min.js"></script>
     <script src="js/L.Control.MousePosition.js"></script>
@@ -372,6 +377,85 @@ The authors are not responsible for the direct or indirect consequences of the u
 
         function doHistoRefresh() {
             onomap.getHistory();
+        }
+
+        function length_to_dd_hh_mm_ss(seconds) {
+          if(seconds == 0) {
+            return "0s";
+          }
+          // calculate (and subtract) whole days
+          var days = Math.floor(seconds / 86400);
+          seconds -= days * 86400;
+
+          // calculate (and subtract) whole hours
+          var hours = Math.floor(seconds / 3600) % 24;
+          seconds -= hours * 3600;
+
+          // calculate (and subtract) whole minutes
+          var minutes = Math.floor(seconds / 60) % 60;
+          seconds -= minutes * 60;
+
+          // what's left is seconds
+          var seconds = seconds % 60;  // in theory the modulus is not required
+          if(days > 0) {
+            return days+"d "+hours+"h"+minutes+"m"
+          } else if(hours > 0) {
+            return hours+"h"+minutes+"m";
+          } else if(minutes > 0){
+            return minutes+"m"+seconds+"s";
+          } else {
+            return seconds+"s";
+          }
+        }
+        function loadStatistics() {
+
+          // Retrieve stored statistics file
+          $.ajax({
+               url:"http://data.noise-planet.org/statistics.json",
+               type: "GET",
+               crossDomain:true,
+               cache: false,
+               dataType: "json",
+               success: function(data){
+                 var ctx = document.getElementById("statistics_content").getContext("2d");
+                 window.myBar = new Chart(ctx, {
+                     type: 'bar',
+                     data: data["week_tracks"],
+                     options: {
+
+                         maintainAspectRatio: false,
+                         title:{
+                             display:true,
+                             text:"Measurements duration by week"
+                         },
+                         tooltips: {
+                             mode: 'index',
+                             intersect: false,
+                             callbacks: {
+                              label: function(tooltipItem, data) {
+                                return data.datasets[tooltipItem.datasetIndex].label + ': ' + length_to_dd_hh_mm_ss(tooltipItem.yLabel);
+                              }
+                            }
+                         },
+                         responsive: true,
+                         scales: {
+                             xAxes: [{
+                                 stacked: true,
+                             }],
+                             yAxes: [{
+                                 stacked: true,
+                                 type: "logarithmic",
+                                 beginAtZero: true,
+                                 time: { unit: 'second' },
+                                 ticks: {
+                                   userCallback: function(v) { return length_to_dd_hh_mm_ss(v) }
+                                 }
+                             }]
+                         }
+                     }
+                 });
+               }
+          });
         }
     </script>
 </body>
