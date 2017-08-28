@@ -73,11 +73,15 @@
             </div>
             <div class="sidebar-pane" id="statistics">
                 <h1 class="sidebar-header">Statistics<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
-                <h3>Measurement information</h3>
-                    <div style="height: 300">
-                      <canvas id="statistics_content"></canvas>
-                    </div>
-
+               <h3>Since last week</h3>
+               <p class='attribute_label'>New contributors:</p><pre id="statistics_week_new_contributors"></pre>
+               <p class='attribute_label'>Number of tracks:</p><pre id="statistics_week_new_tracks_count"></pre>
+               <p class='attribute_label'>Duration:</p><pre id="statistics_week_new_tracks_duration"></pre>
+               <h3>Activity</h3>
+                <div style="height: 300">
+                  <canvas id="statistics_country_weeks"></canvas>
+                </div>
+               <h3>All data</h3>
             </div>
             <div class="sidebar-pane" id="about">
                 <h1 class="sidebar-header">About<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
@@ -417,7 +421,11 @@ The authors are not responsible for the direct or indirect consequences of the u
                cache: false,
                dataType: "json",
                success: function(data){
-                 var ctx = document.getElementById("statistics_content").getContext("2d");
+                document.getElementById('statistics_week_new_contributors').innerHTML = data["week_new_contributors"];
+                document.getElementById('statistics_week_new_tracks_count').innerHTML = data["week_new_tracks_count"];
+                document.getElementById('statistics_week_new_tracks_duration').innerHTML =  length_to_dd_hh_mm_ss(data["week_new_tracks_duration"]);
+                // Load country/week stack bar
+                 var ctx = document.getElementById("statistics_country_weeks").getContext("2d");
                  window.myBar = new Chart(ctx, {
                      type: 'bar',
                      data: data["week_tracks"],
@@ -444,8 +452,7 @@ The authors are not responsible for the direct or indirect consequences of the u
                              }],
                              yAxes: [{
                                  stacked: true,
-                                 type: "logarithmic",
-                                 beginAtZero: true,
+                                 //type: "logarithmic",
                                  time: { unit: 'second' },
                                  ticks: {
                                    userCallback: function(v) { return length_to_dd_hh_mm_ss(v) }
