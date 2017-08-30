@@ -89,8 +89,9 @@
                <h4>Tags Cloud</h4>
                <div id="statistics_world_tags" style="width: 100%; height: 350px;"></div>
                <h4>Contribution per country</h4>
-                <div style="height: 300px">
+                <div style="height: 600px">
                   <canvas id="statistics_country_contribution"></canvas>
+                  <canvas id="statistics_country_contribution_count"></canvas>
                 </div>
             </div>
             <div class="sidebar-pane" id="about">
@@ -426,7 +427,10 @@ The authors are not responsible for the direct or indirect consequences of the u
     }
 
     function loadStatistics() {
-
+      // Test if statistics are aloready loaded
+      if (typeof window.statisticsCountryContributionBar !== 'undefined') {
+        return;
+      }
       // Retrieve stored statistics file
       $.ajax({
         url: "http://data.noise-planet.org/statistics.json",
@@ -451,13 +455,13 @@ The authors are not responsible for the direct or indirect consequences of the u
           window.statisticsCountryContributionBar =  new Chart(ctx_contrib, {
             type: 'horizontalBar',
             data: {
-              labels: data["countries"]["names"].slice(0, Math.min(6, data["countries"]["names"].length)),
+              labels: data["countries"]["names"].slice(0, Math.min(8, data["countries"]["names"].length)),
               datasets: [{
                   label: 'Mesurements',
                   backgroundColor: "#d1e5f0",
                   borderColor: "#67a9cf",
                   borderWidth: 1,
-                  data: data["countries"]["track_length"].slice(0, Math.min(6, data["countries"]["track_length"].length))
+                  data: data["countries"]["track_length"].slice(0, Math.min(8, data["countries"]["track_length"].length))
               }]
             },
             options: {
@@ -496,6 +500,40 @@ The authors are not responsible for the direct or indirect consequences of the u
                       }
                     }
                   }]
+                }
+            }
+          });
+
+
+          // Load contribution per country
+          ctx_contrib = document.getElementById("statistics_country_contribution_count").getContext("2d");
+          window.statistics_country_contribution_count =  new Chart(ctx_contrib, {
+            type: 'horizontalBar',
+            data: {
+              labels: data["countries"]["names"].slice(0, Math.min(8, data["countries"]["names"].length)),
+              datasets: [{
+                  label: 'Mesurements',
+                  backgroundColor: "#d1e5f0",
+                  borderColor: "#67a9cf",
+                  borderWidth: 1,
+                  data: data["countries"]["total_tracks"].slice(0, Math.min(8, data["countries"]["total_tracks"].length))
+              }]
+            },
+            options: {
+                // Elements options apply to all of the options unless overridden in a dataset
+                // In this case, we are setting the border of each horizontal bar to be 2px wide
+                elements: {
+                    rectangle: {
+                        borderWidth: 2,
+                    }
+                },
+                responsive: true,
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: 'Number of measurements'
                 }
             }
           });
