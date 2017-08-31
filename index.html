@@ -74,20 +74,43 @@
             </div>
             <div class="sidebar-pane" id="statistics">
                 <h1 class="sidebar-header">Statistics<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
-               <h3>Since 7 days</h3>
-               <p class='attribute_label'>New contributors:</p><pre id="statistics_week_new_contributors"></pre>
-               <p class='attribute_label'>Number of tracks:</p><pre id="statistics_week_new_tracks_count"></pre>
-               <p class='attribute_label'>Duration:</p><pre id="statistics_week_new_tracks_duration"></pre>
-               <h3>Activity</h3>
+
+                <h3>Summary</h3>
+
+                    <table class="table">
+                   <thead>
+                     <tr>
+                       <th></th>
+                       <th>Last 7 days</th>
+                       <th>Last 7 weeks</th>
+                       <th>All activity</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     <tr>
+                       <td>New contributors</td>
+                       <td id="statistics_week_new_contributors"></td>
+                       <td>?</td>
+                       <td id="statistics_total_contributors"></td>
+                     </tr>
+                     <tr>
+                       <td>Number of tracks</td>
+                       <td id="statistics_week_new_tracks_count"></td>
+                       <td >?</td>
+                       <td id="statistics_total_tracks"></td>
+                     </tr>
+                     <tr>
+                       <td>Duration</td>
+                       <td id="statistics_week_new_tracks_duration"></td>
+                       <td>?</td>
+                       <td id="statistics_total_tracks_duration"></td>
+                     </tr>
+                   </tbody>
+                 </table>
+               <h3>Activity of the last 7 weeks</h3>
                 <div style="height: 300px">
                   <canvas id="statistics_country_weeks"></canvas>
                 </div>
-               <h3>All data</h3>
-               <p class='attribute_label'>Approximate number of contributors:</p><pre id="statistics_total_contributors"></pre>
-               <p class='attribute_label'>Total number of tracks:</p><pre id="statistics_total_tracks"></pre>
-               <p class='attribute_label'>Total duration:</p><pre id="statistics_total_tracks_duration"></pre>
-               <h4>Tags Cloud</h4>
-               <div id="statistics_world_tags" style="width: 100%; height: 350px;"></div>
                <h4>Contribution per country</h4>
                 <div>
                   <canvas id="statistics_country_contribution"></canvas>
@@ -96,8 +119,10 @@
                 <h4>Distributions</h4>
                  <div>
                   <canvas id="statistics_length_distribution"></canvas>
-                  <canvas id="statistics_tags_per_track"></canvas>
+                    <canvas id="statistics_tags_per_track"></canvas>
                 </div>
+                <h4>Tags</h4>
+                <div id="statistics_world_tags" style="width: 100%; height: 350px;"></div>
 
             </div>
             <div class="sidebar-pane" id="about">
@@ -454,6 +479,11 @@ The authors are not responsible for the direct or indirect consequences of the u
           document.getElementById('statistics_total_tracks_duration').innerHTML = length_to_dd_hh_mm_ss(data["total_tracks_duration"]);
 
           // Load tags
+          // Set tooltipItem
+          // <a data-placement="right" style="cursor: pointer;" data-toggle="tooltip" title="" onclick="onomap.goToHistory(3)" data-original-title="Vannes, Bretagne, France"><span class="flag-icon flag-icon-fr"></span></a>
+          for(var idTag=0; idTag < data["tags"].length; idTag++) {
+            data["tags"][idTag]["link"] = {'href':"", 'data-original-title': data["tags"][idTag]["weight"]+" measurement(s)", 'data-toggle':"tooltip", 'data-placement':"top", title:""}
+          }
           $("#statistics_world_tags").jQCloud(data["tags"]);
 
           // Load contribution per country
@@ -495,7 +525,7 @@ The authors are not responsible for the direct or indirect consequences of the u
                 },
                 title: {
                     display: true,
-                    text: 'Sum of measurements length'
+                    text: 'Measurements duration'
                 },
                 scales: {
                   xAxes: [{
@@ -553,7 +583,7 @@ The authors are not responsible for the direct or indirect consequences of the u
               maintainAspectRatio: false,
               title: {
                 display: true,
-                text: "Measurements duration by week"
+                text: "Measurement duration by week"
               },
               tooltips: {
                 mode: 'index',
@@ -604,7 +634,7 @@ The authors are not responsible for the direct or indirect consequences of the u
                 legend: { display: false },
                 title: {
                   display: true,
-                  text: 'Measurement length distribtion'
+                  text: 'Measurement duration distribtion'
                 }
               }
           });
@@ -642,6 +672,9 @@ The authors are not responsible for the direct or indirect consequences of the u
                 }
               }
           });
+
+          setTimeout(function() { $('[data-toggle="tooltip"]').tooltip(); }, 1000);
+
 
         }
       });
