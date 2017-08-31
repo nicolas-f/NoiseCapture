@@ -75,7 +75,7 @@
             <div class="sidebar-pane" id="statistics">
                 <h1 class="sidebar-header">Statistics<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
 
-                <h3>Summary</h3>
+                <h4>Summary</h4>
 
                     <table class="table">
                    <thead>
@@ -107,7 +107,7 @@
                      </tr>
                    </tbody>
                  </table>
-               <h3>Activity of the last 7 weeks</h3>
+               <h4>Activity of the last 7 weeks</h4>
                 <div style="height: 300px">
                   <canvas id="statistics_country_weeks"></canvas>
                 </div>
@@ -482,7 +482,7 @@ The authors are not responsible for the direct or indirect consequences of the u
           // Set tooltipItem
           // <a data-placement="right" style="cursor: pointer;" data-toggle="tooltip" title="" onclick="onomap.goToHistory(3)" data-original-title="Vannes, Bretagne, France"><span class="flag-icon flag-icon-fr"></span></a>
           for(var idTag=0; idTag < data["tags"].length; idTag++) {
-            data["tags"][idTag]["link"] = {'href':"", 'data-original-title': data["tags"][idTag]["weight"]+" measurement(s)", 'data-toggle':"tooltip", 'data-placement':"top", title:""}
+            data["tags"][idTag]["link"] = {'href':"", 'data-original-title': data["tags"][idTag]["weight"]+" tracks", 'data-toggle':"tooltip", 'data-placement':"top", title:""}
           }
           $("#statistics_world_tags").jQCloud(data["tags"]);
 
@@ -673,6 +673,8 @@ The authors are not responsible for the direct or indirect consequences of the u
               }
           });
 
+          // Have to call this for tags clouds toolips to work
+          // do not remove
           setTimeout(function() { $('[data-toggle="tooltip"]').tooltip(); }, 1000);
 
 
