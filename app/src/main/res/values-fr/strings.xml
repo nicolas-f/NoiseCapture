@@ -298,6 +298,11 @@ track.geojson échantillons mesurés chaque seconde au format geojson (http://ge
     <string name="title_settings_user_noise_knowledge">Profil de l\'utilisateur</string>
     <string name="settings_user_noise_knowledge_description">Comment évaluez-vous vos connaissances sur les environnements sonores ?</string>
     <string name="hint_userinput_noiseparty_tag">Code NoiseCapture Party</string>
+    <string name="calibration_menu_btn_manual"/>
+    <string name="calibration_menu_btn_wifi_guest"/>
+    <string name="calibration_menu_btn_wifi_host"/>
+    <string name="title_activity_calibration_host"/>
+    <string name="title_activity_calibration_peer"/>
     <string-array name="knowledge">
         <item>Je n\'ai aucune connaissance dans le domaine du bruit</item>
         <item>J\'ai quelques connaissances dans le domaine du bruit</item>

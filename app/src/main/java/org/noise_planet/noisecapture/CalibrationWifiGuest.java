@@ -78,7 +78,7 @@ public class CalibrationWifiGuest extends MainActivity implements PropertyChange
             // New leq
             AudioProcess.AudioMeasureResult measure =
                     (AudioProcess.AudioMeasureResult) event.getNewValue();
-            final double leq = measure.getSignalLeq();
+            final double leq = measure.getGlobaldBaValue();
 
         } else if(CalibrationService.PROP_CALIBRATION_STATE.equals(event.getPropertyName())) {
             // Calibration service state change, inform user

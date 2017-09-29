@@ -307,4 +307,29 @@ track.geojson 1s samples of measures. Using the geojson format (http://geojson.i
         <item>I have some knowledge in the field of noise</item>
         <item>I am an expert/pro in the field of noise</item>
     </string-array>
+
+    <string name="title_activity_menu_calibration">Calibration methods</string>
+
+    <string name="title_activity_calibration_host">Host calibration session</string>
+    <string name="title_activity_calibration_peer">Wifi calibration session</string>
+    <string name="calibration_status_waiting_for_peers">Awaiting peers to connect</string>
+    <string name="calibration_status_waiting_for_host">Awaiting host broadcast</string>
+    <string name="calibration_status_paired_to_peer">Paired to peer(s)</string>
+    <string name="calibration_status_paired_to_host">Paired to host</string>
+    <string name="calibration_status_p2p_error">Peer to peer wifi feature not accessible</string>
+    <string name="calibration_status_p2p_busy">Peer to peer wifi feature busy</string>
+    <string name="calibration_status_p2p_disabled">Peer to peer wifi feature disabled by user</string>
+    <string name="permission_explain_wifi">NoiseCapture requires wifi permission in order to establish wifi peer to peer connection</string>
+
+
+    <string name="calibration_menu_btn_manual">Manual calibration</string>
+    <string name="calibration_menu_btn_wifi_guest">WIFI calibration</string>
+    <string name="calibration_menu_btn_wifi_host">Calibrate other devices</string>
+    <string name="wifi_peer_available">Available</string>
+    <string name="wifi_peer_invited">Invited</string>
+    <string name="wifi_peer_connected">Connected</string>
+    <string name="wifi_peer_paired">Paired, try to connect</string>
+    <string name="wifi_peer_failed">Failed</string>
+    <string name="wifi_peer_unavailable">Unavailable</string>
+    <string name="wifi_peer_unknown">Unknown</string>
 </resources>

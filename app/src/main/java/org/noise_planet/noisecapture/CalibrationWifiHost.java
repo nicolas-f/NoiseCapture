@@ -192,7 +192,7 @@ public class CalibrationWifiHost extends MainActivity implements PropertyChangeL
             // New leq
             AudioProcess.AudioMeasureResult measure =
                     (AudioProcess.AudioMeasureResult) event.getNewValue();
-            final double leq = measure.getSignalLeq();
+            final double leq = measure.getGlobaldBaValue();
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {

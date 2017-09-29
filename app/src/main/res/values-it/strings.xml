@@ -298,6 +298,11 @@ track.geojson Campioni da 1 secondo delle misurazioni. In formato geojson (http:
     <string name="title_settings_user_noise_knowledge">Profilo utente</string>
     <string name="settings_user_noise_knowledge_description">"Come valuta la tua conoscenza di ambienti sonori ? "</string>
     <string name="hint_userinput_noiseparty_tag">Tag NoiseParty</string>
+    <string name="calibration_menu_btn_manual"/>
+    <string name="calibration_menu_btn_wifi_guest"/>
+    <string name="calibration_menu_btn_wifi_host"/>
+    <string name="title_activity_calibration_host"/>
+    <string name="title_activity_calibration_peer"/>
     <string-array name="knowledge">
         <item>Non ho conoscenza nel campo del rumore</item>
         <item>Ho qualche conoscenza nel campo del rumore</item>
