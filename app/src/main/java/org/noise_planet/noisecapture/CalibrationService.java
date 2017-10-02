@@ -27,20 +27,13 @@
 
 package org.noise_planet.noisecapture;
 
-import android.app.Activity;
 import android.app.Service;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.net.wifi.WifiManager;
-import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.os.Binder;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -48,13 +41,13 @@ import android.os.Message;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
-import android.support.v4.content.LocalBroadcastManager;
-import android.widget.Toast;
 
 import com.peak.salut.Callbacks.SalutCallback;
 import com.peak.salut.Callbacks.SalutDataCallback;
+import com.peak.salut.Callbacks.SalutDeviceCallback;
 import com.peak.salut.Salut;
 import com.peak.salut.SalutDataReceiver;
+import com.peak.salut.SalutDevice;
 import com.peak.salut.SalutServiceData;
 
 import org.slf4j.Logger;
@@ -63,10 +56,10 @@ import org.slf4j.LoggerFactory;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
-import java.nio.charset.Charset;
-import java.util.HashMap;
 import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.noise_planet.noisecapture.MainActivity.getDouble;
 
 
 /**
@@ -78,6 +71,8 @@ public class CalibrationService extends Service implements PropertyChangeListene
     public static final String EXTRA_HOST = "MODE_HOST";
     public static final String SERVICE_NAME= "NoiseCapture";
     public static final int SERVICE_PORT = 4242;
+    private AtomicBoolean recording = new AtomicBoolean(true);
+    private AtomicBoolean canceled = new AtomicBoolean(false);
     public final AtomicBoolean queryRegisterWifiP2PService = new AtomicBoolean(false);
 
     // properties
@@ -165,14 +160,14 @@ public class CalibrationService extends Service implements PropertyChangeListene
 
     // This is the object that receives interactions from clients.  See
     // RemoteService for a more complete example.
-    private final IBinder mBinder = new CalibrationService.LocalBinder();
+    private final IBinder mBinder = new LocalBinder();
     private PropertyChangeSupport listeners = new PropertyChangeSupport(this);
 
     // Other resources
     private boolean measurementIsBound = false;
     private boolean isHost = false;
 
-    private MeasurementService measurementService;
+    private AudioProcess audioProcess;
 
     @Override
     public void onCreate() {
@@ -201,49 +196,51 @@ public class CalibrationService extends Service implements PropertyChangeListene
      */
     public void init() {
         LOGGER.info("CalibrationService.init");
-        //WifiManager wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-        //if(!wifi.isWifiEnabled()) {
-        //    wifi.setWifiEnabled(true);
-        //}
+        network = new Salut(new SalutDataReceiver(this, this), new SalutServiceData
+                (CalibrationService.SERVICE_NAME, CalibrationService.SERVICE_PORT, android.os.Build.MODEL), new SalutCallback() {
+            @Override
+            public void call() {
+                //textStatus.setText(R.string.calibration_status_p2p_error);
+            }
+        }) {
+            @Override
+            public String serialize(Object o) {
+                return o.toString();
+            }
+        };
     }
+
+    public void setupNetwork()
+    {
+        if(!network.isRunningAsHost)
+        {
+            setState(CALIBRATION_STATE.LOOKING_FOR_HOST);
+            network.discoverNetworkServices(new SalutCallback() {
+                @Override
+                public void call() {
+                    //network.foundDevices.get(0).instanceName
+                }
+            }, true);
+        }
+        else
+        {
+            setState(CALIBRATION_STATE.LOOKING_FOR_PEERS);
+
+            network.startNetworkService(new SalutDeviceCallback() {
+                @Override
+                public void call(SalutDevice salutDevice) {
+                    listeners.firePropertyChange(PROP_PEER_LIST, null, salutDevice);
+                }
+            });
+        }
+    }
+
 
     @Override
     public void onDestroy() {
         super.onDestroy();
         doUnbindService();
     }
-
-    private ServiceConnection measureConnection = new ServiceConnection() {
-        public void onServiceConnected(ComponentName className, IBinder service) {
-            // This is called when the connection with the service has been
-            // established, giving us the service object we can use to
-            // interact with the service.  Because we have bound to a explicit
-            // service that we know is running in our own process, we can
-            // cast its IBinder to a concrete class and directly access it.
-            measurementService = ((MeasurementService.LocalBinder)service).getService();
-            CalibrationService.this.measurementIsBound = true;
-
-            measurementService.addPropertyChangeListener(CalibrationService.this);
-            if(!measurementService.isRecording()) {
-                measurementService.startRecording();
-            }
-            measurementService.setdBGain(0);
-            measurementService.getAudioProcess().setDoFastLeq(false);
-            measurementService.getAudioProcess().setDoOneSecondLeq(true);
-            measurementService.getAudioProcess().setWeightingA(false);
-            measurementService.getAudioProcess().setHannWindowOneSecond(false);
-        }
-
-        public void onServiceDisconnected(ComponentName className) {
-            // This is called when the connection with the service has been
-            // unexpectedly disconnected -- that is, its process crashed.
-            // Because it is running in our same process, we should never
-            // see this happen.
-            measurementService.removePropertyChangeListener(CalibrationService.this);
-            measurementService = null;
-            CalibrationService.this.measurementIsBound = false;
-        }
-    };
 
     @Nullable
     @Override
@@ -268,14 +265,6 @@ public class CalibrationService extends Service implements PropertyChangeListene
         listeners.addPropertyChangeListener(propertyChangeListener);
     }
 
-    /**
-     * Set the Salut instance created from the activity
-     * @param network Salut instance
-     */
-    public void setNetwork(Salut network) {
-        this.network = network;
-    }
-
     public void startCalibration() {
         if(CALIBRATION_STATE.AWAITING_START.equals(state) && isHost) {
             //buildMessage(ID_START_CALIBRATION, defaultWarmupTime, defaultCalibrationTime));
@@ -295,7 +284,7 @@ public class CalibrationService extends Service implements PropertyChangeListene
     private void runWarmup() {
         // Link measurement service with gui
         // Application have right now all permissions
-        doBindMeasureService();
+        initAudioProcess();
         timeHandler = new Handler(Looper.getMainLooper(), progressHandler);
         progressHandler.start(defaultWarmupTime * 1000);
     }
@@ -340,18 +329,24 @@ public class CalibrationService extends Service implements PropertyChangeListene
         }
     }
 
-    void doBindMeasureService() {
-        // Establish a connection with the service.  We use an explicit
-        // class name because we want a specific service implementation that
-        // we know will be running in our own process (and thus won't be
-        // supporting component replacement by other applications).
-        if(!bindService(new Intent(this, MeasurementService.class), measureConnection,
-                Context.BIND_AUTO_CREATE)) {
-            Toast.makeText(CalibrationService.this, R.string.measurement_service_disconnected,
-                    Toast.LENGTH_SHORT).show();
+    private void initAudioProcess() {
+        canceled.set(false);
+        recording.set(true);
+        audioProcess = new AudioProcess(recording, canceled);
+        audioProcess.setDoFastLeq(false);
+        audioProcess.setDoOneSecondLeq(true);
+        audioProcess.setWeightingA(false);
+        audioProcess.setHannWindowOneSecond(true);
+        if(isHost) {
+            SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+            audioProcess.setGain((float)Math.pow(10, getDouble(sharedPref,"settings_recording_gain", 0) / 20));
         } else {
-            measurementIsBound = true;
+            audioProcess.setGain(1);
         }
+        audioProcess.getListeners().addPropertyChangeListener(this);
+
+        // Start measurement
+        new Thread(audioProcess).start();
     }
 
     protected void setState(CALIBRATION_STATE state) {
@@ -362,10 +357,10 @@ public class CalibrationService extends Service implements PropertyChangeListene
     }
 
     void doUnbindService() {
-        if (measurementIsBound) {
-            measurementService.removePropertyChangeListener(this);
-            // Detach our existing connection.
-            unbindService(measureConnection);
+        if (audioProcess != null) {
+            audioProcess.getListeners().removePropertyChangeListener(this);
+            canceled.set(true);
+            recording.set(false);
         }
     }
     public CALIBRATION_STATE getState() {

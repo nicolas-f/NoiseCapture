@@ -37,6 +37,7 @@ import android.os.IBinder;
 import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.peak.salut.Callbacks.SalutCallback;
 import com.peak.salut.Salut;
@@ -50,7 +51,6 @@ public class CalibrationWifiGuest extends MainActivity implements PropertyChange
 
     private boolean mIsBound = false;
     private CalibrationService calibrationService;
-    private Salut network;
     private ImageView connectionStatusImage;
     private TextView textStatus;
     private TextView textDeviceName;
@@ -65,11 +65,6 @@ public class CalibrationWifiGuest extends MainActivity implements PropertyChange
         connectionStatusImage = (ImageView) findViewById(R.id.imageView_value_wifi_state);
         textStatus = (TextView) findViewById(R.id.calibration_state);
         textDeviceName = (TextView) findViewById(R.id.calibration_host_ssid);
-
-
-        if(checkAndAskWifiP2PPermissions()) {
-            doBindService();
-        }
     }
 
     @Override
@@ -98,17 +93,12 @@ public class CalibrationWifiGuest extends MainActivity implements PropertyChange
 
     private ServiceConnection mConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, IBinder service) {
+            mIsBound = true;
             calibrationService = ((CalibrationService.LocalBinder)service).getService();
             CalibrationWifiHost.applyStateChange(calibrationService.getState(), connectionStatusImage, textStatus);
             calibrationService.addPropertyChangeListener(CalibrationWifiGuest.this);
-            CalibrationWifiGuest.this.network = new Salut(new SalutDataReceiver(CalibrationWifiGuest.this, calibrationService), new SalutServiceData(CalibrationService.SERVICE_NAME, CalibrationService.SERVICE_PORT, android.os.Build.MODEL), new SalutCallback() {
-                @Override
-                public void call() {
-                    textStatus.setText(R.string.calibration_status_p2p_error);
-                }
-            });
-            calibrationService.setNetwork(CalibrationWifiGuest.this.network);
             calibrationService.init();
+            calibrationService.setupNetwork();
         }
 
         public void onServiceDisconnected(ComponentName className) {
@@ -121,6 +111,13 @@ public class CalibrationWifiGuest extends MainActivity implements PropertyChange
         }
     };
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if(checkAndAskWifiP2PPermissions()) {
+            doBindService();
+        }
+    }
 
     void doUnbindService() {
         if (mIsBound) {
@@ -138,8 +135,10 @@ public class CalibrationWifiGuest extends MainActivity implements PropertyChange
         // supporting component replacement by other applications).
         Intent intent = new Intent(this, CalibrationService.class);
         intent.putExtra(CalibrationService.EXTRA_HOST, 0);
-        if(bindService(intent, mConnection, Context.BIND_AUTO_CREATE)) {
-            mIsBound = true;
+        if(!bindService(intent, mConnection, Context.BIND_AUTO_CREATE)) {
+            Toast.makeText(this, R.string.measurement_service_disconnected,
+                    Toast.LENGTH_SHORT).show();
+            unbindService(mConnection);
         }
     }
 

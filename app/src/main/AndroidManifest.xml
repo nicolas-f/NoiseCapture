@@ -43,6 +43,7 @@
         </provider>
 
         <service android:name=".MeasurementService"/>
+        <service android:name=".CalibrationService"/>
 
         <activity
             android:name=".MeasurementActivity"
