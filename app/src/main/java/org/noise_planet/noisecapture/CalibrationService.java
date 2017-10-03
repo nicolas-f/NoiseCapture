@@ -113,6 +113,7 @@ public class CalibrationService extends Service implements PropertyChangeListene
     SalutDataReceiver dataReceiver;
     SalutServiceData serviceData;
     // WifiDirect manager
+    //sample https://gist.github.com/markrjr/0519268f69a5823da17b
     Salut network;
 
     private static final String messageSeparator = "|";
