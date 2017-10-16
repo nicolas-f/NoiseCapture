@@ -48,6 +48,8 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import com.peak.salut.SalutDevice;
+
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
@@ -206,7 +208,7 @@ public class CalibrationWifiHost extends MainActivity implements PropertyChangeL
                     (CalibrationService.CALIBRATION_STATE)event.getNewValue();
             applyStateChange(newState, connectionStatusImage, textStatus);
         } else if(CalibrationService.PROP_PEER_LIST.equals(event.getPropertyName())) {
-            deviceListAdapter.onPeersAvailable((WifiP2pDeviceList)event.getNewValue());
+            deviceListAdapter.onPeersAvailable();
         } else if(CalibrationService.PROP_PEER_READY.equals(event.getPropertyName())) {
             MAINLOGGER.info("Peer ready to start calibration " + event.getNewValue());
         }
@@ -218,6 +220,7 @@ public class CalibrationWifiHost extends MainActivity implements PropertyChangeL
             applyStateChange(calibrationService.getState(), connectionStatusImage, textStatus);
             calibrationService.addPropertyChangeListener(CalibrationWifiHost.this);
             calibrationService.init();
+            calibrationService.setupNetwork();
         }
 
         public void onServiceDisconnected(ComponentName className) {
@@ -254,8 +257,8 @@ public class CalibrationWifiHost extends MainActivity implements PropertyChangeL
     }
 
 
-    public static class DeviceListAdapter extends BaseAdapter implements WifiP2pManager.PeerListListener {
-        private List<WifiP2pDevice> peers = new ArrayList<>();
+    public static class DeviceListAdapter extends BaseAdapter {
+        private List<SalutDevice> peers = new ArrayList<>();
         private CalibrationWifiHost activity;
         private LayoutInflater mInflater;
 
@@ -265,9 +268,8 @@ public class CalibrationWifiHost extends MainActivity implements PropertyChangeL
             mInflater = (LayoutInflater)activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         }
 
-        @Override
-        public void onPeersAvailable(WifiP2pDeviceList peers) {
-            this.peers = new ArrayList<>(peers.getDeviceList());
+        public void onPeersAvailable() {
+            peers = new ArrayList<>(activity.calibrationService.network.foundDevices);
             notifyDataSetChanged();
         }
 
@@ -277,7 +279,7 @@ public class CalibrationWifiHost extends MainActivity implements PropertyChangeL
         }
 
         @Override
-        public WifiP2pDevice getItem(int position) {
+        public SalutDevice getItem(int position) {
             return peers.get(position);
         }
 
@@ -301,7 +303,7 @@ public class CalibrationWifiHost extends MainActivity implements PropertyChangeL
             ImageView statusIcon = (ImageView) view.findViewById(R.id.icon);
             int stringId;
             AlphaAnimation animation;
-            switch (getItem(position).status) {
+            switch (getItem(position).isRegistered) {
                 case WifiP2pDevice.AVAILABLE:
                     // yellow
                     stringId = R.string.wifi_peer_available;
