@@ -40,25 +40,13 @@ public class AWeighting {
      * Denominator coefficients of the A-weighting filter determined by means of a bilinear transform that converts
      * second-order section analog weights to second-order section digital weights.
      */
-    public final static double[] denominator = new double[]{ 1.0,
-                                                            -4.0195761811158306,
-                                                             6.1894064429206894,
-                                                            -4.4531989035441137,
-                                                             1.420842949621872,
-                                                            -0.14182547383030505,
-                                                             0.004351177233494978};
+    public final static double[] denominator = new double[]{ 1. , -3.65644604, 4.83146845, -2.5575975, 0.25336804, 0.12244303, 0.00676407};
 
     /**
      * Numerator coefficients of the A-weighting filter determined by means of a bilinear transform that converts
      * second-order section analog weights to second-order section digital weights.
      */
-    public final static double[] numerator = new double[]{ 0.25574112520425768,
-                                                          -0.51148225040851569,
-                                                          -0.25574112520425829,
-                                                           1.0229645008170301,
-                                                          -0.25574112520425829,
-                                                          -0.51148225040851569,
-                                                           0.25574112520425768};
+    public final static double[] numerator = new double[]{ 0.34345834, -0.68691668, -0.34345834, 1.37383335, -0.34345834, -0.68691668, 0.34345834};
 
     /**
      * A-weighting of the raw time signal

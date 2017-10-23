@@ -31,6 +31,8 @@ import org.jtransforms.fft.FloatFFT_1D;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteOrder;
@@ -161,6 +163,22 @@ public class TestJTransforms {
         assertEquals(72.24, processingResult.getGlobaldBaValue(), 0.01);
     }
 
+    @Test
+    public void testVoice() throws IOException {
+        int rate = 32000;
+        InputStream inputStream = new FileInputStream(new File("/home/nicolas/github/cense-coder-build/Testing/speak_32000Hz_16bitsPCM_10s.raw"));
+        // Read input signal up to buffer.length
+        short[] signal = SOSSignalProcessing.loadShortStream(inputStream, ByteOrder.LITTLE_ENDIAN);
+        // Split signal to simulate recording
+        double leq[] = new double[10];
+        for(int part=0; part < leq.length; part++) {
+            double[] signalPart = new double[rate];
+            for(int i=0; i<rate; i++) {
+                signalPart[i] = signal[part*rate + i];
+            }
+            leq[part] = AcousticIndicators.getLeq(AWeighting.aWeightingSignal(signalPart), 32767.);
+        }
+    }
     @Test
     public void testAmplitude() {
 
