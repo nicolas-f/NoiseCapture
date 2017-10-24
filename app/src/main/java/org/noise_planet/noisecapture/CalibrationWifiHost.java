@@ -303,52 +303,27 @@ public class CalibrationWifiHost extends MainActivity implements PropertyChangeL
             ImageView statusIcon = (ImageView) view.findViewById(R.id.icon);
             int stringId;
             AlphaAnimation animation;
-            switch (getItem(position).isRegistered) {
-                case WifiP2pDevice.AVAILABLE:
-                    // yellow
-                    stringId = R.string.wifi_peer_available;
-                    statusIcon.setImageResource(R.drawable.wifi_lookup);
-                    statusIcon.clearAnimation();
-                    break;
-                case WifiP2pDevice.INVITED:
-                    // yellow blink
-                    stringId = R.string.wifi_peer_invited;
-                    statusIcon.setImageResource(R.drawable.wifi_lookup);
-                    animation = new AlphaAnimation(1, 0);
-                    animation.setInterpolator(new LinearInterpolator());
-                    animation.setRepeatCount(Animation.INFINITE);
-                    animation.setRepeatMode(Animation.REVERSE);
-                    animation.setDuration(BLINK_DELAY);
-                    statusIcon.startAnimation(animation);
-                    break;
-                case WifiP2pDevice.CONNECTED:
-                    // green
-                    statusIcon.setImageResource(R.drawable.wifi_active);
-                    animation = new AlphaAnimation(1, 0);
-                    animation.setInterpolator(new LinearInterpolator());
-                    animation.setRepeatCount(Animation.INFINITE);
-                    animation.setRepeatMode(Animation.REVERSE);
-                    animation.setDuration(BLINK_DELAY);
-                    statusIcon.startAnimation(animation);
-                    stringId = R.string.wifi_peer_paired;
-                    break;
-                case WifiP2pDevice.FAILED:
-                    // red
-                    statusIcon.setImageResource(R.drawable.no_wifi);
-                    statusIcon.clearAnimation();
-                    stringId = R.string.wifi_peer_failed;
-                    break;
-                case WifiP2pDevice.UNAVAILABLE:
-                    // red
-                    statusIcon.setImageResource(R.drawable.no_wifi);
-                    statusIcon.clearAnimation();
-                    stringId = R.string.wifi_peer_unavailable;
-                    break;
-                default:
-                    // red
-                    statusIcon.setImageResource(R.drawable.no_wifi);
-                    statusIcon.clearAnimation();
-                    stringId = R.string.wifi_peer_unknown;
+            SalutDevice salutDevice = getItem(position);
+            if(salutDevice.isRegistered) {
+                // green
+                statusIcon.setImageResource(R.drawable.wifi_active);
+                animation = new AlphaAnimation(1, 0);
+                animation.setInterpolator(new LinearInterpolator());
+                animation.setRepeatCount(Animation.INFINITE);
+                animation.setRepeatMode(Animation.REVERSE);
+                animation.setDuration(BLINK_DELAY);
+                statusIcon.startAnimation(animation);
+                stringId = R.string.wifi_peer_paired;
+            } else {
+                // yellow blink
+                stringId = R.string.wifi_peer_invited;
+                statusIcon.setImageResource(R.drawable.wifi_lookup);
+                animation = new AlphaAnimation(1, 0);
+                animation.setInterpolator(new LinearInterpolator());
+                animation.setRepeatCount(Animation.INFINITE);
+                animation.setRepeatMode(Animation.REVERSE);
+                animation.setDuration(BLINK_DELAY);
+                statusIcon.startAnimation(animation);
             }
             statusRow.setText(activity.getText(stringId));
             return view;

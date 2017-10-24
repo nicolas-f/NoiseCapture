@@ -110,8 +110,6 @@ public class CalibrationService extends Service implements PropertyChangeListene
         CANCEL_IN_PROGRESS,         // Canceled but waiting for timer to stop. Next state is AWAITING_START
     }
 
-    SalutDataReceiver dataReceiver;
-    SalutServiceData serviceData;
     // WifiDirect manager
     //sample https://gist.github.com/markrjr/0519268f69a5823da17b
     Salut network;
@@ -209,20 +207,34 @@ public class CalibrationService extends Service implements PropertyChangeListene
 
     public void setupNetwork()
     {
-        if(!network.isRunningAsHost)
+        if(!isHost)
         {
             setState(CALIBRATION_STATE.LOOKING_FOR_HOST);
-            network.discoverNetworkServices(new SalutCallback() {
+            network.discoverNetworkServices(new SalutDeviceCallback() {
                 @Override
-                public void call() {
-                    //network.foundDevices.get(0).instanceName
+                public void call(SalutDevice device) {
+                    if(device.serviceName != null && device.serviceName.endsWith(CalibrationService
+                            .SERVICE_NAME)) {
+                        network.registerWithHost(device, new SalutCallback() {
+                            @Override
+                            public void call() {
+                                listeners.firePropertyChange(PROP_CALIBRATION_STATE, null,
+                                        CALIBRATION_STATE.PAIRED_TO_HOST);
+                            }
+                        }, new SalutCallback() {
+                            @Override
+                            public void call() {
+                                listeners.firePropertyChange(PROP_CALIBRATION_STATE, null,
+                                        CALIBRATION_STATE.P2P_UNSUPPORTED);
+                            }
+                        });
+                    }
                 }
             }, true);
         }
         else
         {
             setState(CALIBRATION_STATE.LOOKING_FOR_PEERS);
-
             network.startNetworkService(new SalutDeviceCallback() {
                 @Override
                 public void call(SalutDevice salutDevice) {
