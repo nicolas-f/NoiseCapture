@@ -155,24 +155,8 @@ public class AcousticModem {
      * @return size of signal length for the provided data
      */
     public int getSignalLength(byte[] source, int sourceIndex, int sourceLength) {
-        int lastWord = 0;
-        int bufferLength = 0;
-        for (int idByte = sourceIndex; idByte < sourceIndex + sourceLength; idByte++) {
-            int[] words = byteToWordsIndex(source[idByte]);
-            if (idByte > 0 && lastWord == words[0]) {
-                // If the same word has to be sent we add a blank word
-                bufferLength += settings.wordLength;
-            }
-            bufferLength += settings.wordLength;
-            lastWord = words[0];
-            if (lastWord == words[1]) {
-                // If the same word has to be sent we add a blank word
-                bufferLength += settings.wordLength;
-            }
-            bufferLength += settings.wordLength;
-            lastWord = words[1];
-        }
-        return bufferLength + settings.wordLength;
+        // Each byte take two words and each word have a blank word before
+        return sourceLength * settings.wordLength * 2 * 2;
     }
 
     /**
@@ -193,33 +177,22 @@ public class AcousticModem {
         if (outIndex + getSignalLength(source, sourceIndex, sourceLength) > out.length) {
             throw new IllegalArgumentException("Output buffer length is too short" + out.length);
         }
-        int lastWord = 0;
         for (int idByte = sourceIndex; idByte < sourceIndex + sourceLength; idByte++) {
             int[] words = byteToWordsIndex(source[idByte]);
-            if (idByte > 0 && lastWord == words[0]) {
-                // If the same word has to be sent we add a blank word before
-                for (int i = outIndex; i < outIndex + settings.wordLength; i++) {
-                    out[i] = 0;
-                }
-                outIndex += settings.wordLength;
+            // Add a blank before
+            for (int i = outIndex; i < outIndex + settings.wordLength; i++) {
+                out[i] = 0;
             }
+            outIndex += settings.wordLength;
             copyTone(words[0], out, outIndex, toneRms);
             outIndex += settings.wordLength;
-            lastWord = words[0];
-            if (lastWord == words[1]) {
-                // If the same word has to be sent we add a blank word before
-                for (int i = outIndex; i < outIndex + settings.wordLength; i++) {
-                    out[i] = 0;
-                }
-                outIndex += settings.wordLength;
+            // Add a blank before
+            for (int i = outIndex; i < outIndex + settings.wordLength; i++) {
+                out[i] = 0;
             }
+            outIndex += settings.wordLength;
             copyTone(words[1], out, outIndex, toneRms);
             outIndex += settings.wordLength;
-            lastWord = words[1];
-        }
-        // Finish with a blank word
-        for (int i = outIndex; i < outIndex + settings.wordLength; i++) {
-            out[i] = 0;
         }
     }
 
