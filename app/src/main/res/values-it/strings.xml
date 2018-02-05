@@ -308,4 +308,5 @@ track.geojson Campioni da 1 secondo delle misurazioni. In formato geojson (http:
     <string name="calibration_log_receive_word">Tono: %s</string>
     <string name="calibration_log_send_message">Send: %s</string>
     <string name="calibration_log_receive_message">%s</string>
+    <string name="calibration_linear_export"/>
 </resources>

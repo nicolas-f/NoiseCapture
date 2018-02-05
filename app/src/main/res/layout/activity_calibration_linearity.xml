@@ -139,11 +139,11 @@
             android:id="@+id/btn_start"
             android:text="@string/calibration_button_start"/>
         <Button
-            android:id="@+id/btn_apply"
+            android:id="@+id/btn_export"
             android:layout_weight="1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/calibration_button_apply"
+            android:text="@string/calibration_linear_export"
             android:enabled="false"/>
         <Button
             android:id="@+id/btn_reset"

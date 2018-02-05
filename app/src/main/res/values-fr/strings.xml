@@ -308,4 +308,5 @@ track.geojson échantillons mesurés chaque seconde au format geojson (http://ge
     <string name="calibration_log_receive_word">Tonalité: %s</string>
     <string name="calibration_log_send_message">Send: %s</string>
     <string name="calibration_log_receive_message">Message: %s</string>
+    <string name="calibration_linear_export">Export</string>
 </resources>
