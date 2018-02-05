@@ -103,8 +103,8 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
     public static final String CSV_FILENAME = "calibration_cache/calibration_cache/calibration.csv";
     private int splLoop = 0;
     private List<Double> splBackroundNoise = new ArrayList<>();
-    private static final double DB_STEP = 2.5;
-    private static final int MAX_SPL_LOOP = 10;
+    private static final double DB_STEP = 3;
+    private static final int MAX_SPL_LOOP = 20;
     private double pinkNoiseGain = 0;
     private ProgressBar progressBar_wait_calibration_recording;
     private TextView startButton;
@@ -542,16 +542,15 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
     private void playNewTrack() {
         // Compute rms value
         double gain =  - (splLoop++ * DB_STEP);
-        short rms = (short) Math.max(0, Math.min(Math.pow(10, (10 * Math.log10(Short
-                .MAX_VALUE) + gain) / 10), Short.MAX_VALUE));
-        short[] data = SOSSignalProcessing.makePinkNoise(44100, rms, 0);
+        double pressure = Short.MAX_VALUE * Math.pow(10, gain / 20);
+        short[] data = SOSSignalProcessing.makePinkNoise(44100, pressure, 0);
         double[] fftCenterFreq = FFTSignalProcessing.computeFFTCenterFrequency(AudioProcess.REALTIME_SAMPLE_RATE_LIMITATION);
         FFTSignalProcessing fftSignalProcessing = new FFTSignalProcessing(44100, fftCenterFreq,
                 data.length);
         fftSignalProcessing.addSample(data);
         pinkNoiseGain = gain;
         freqLeqStats.add(new LinearCalibrationResult(fftSignalProcessing.processSample(true, false, false)));
-        LOGGER.info("Emit white noise of " + pinkNoiseGain + " dB (rms: " + rms + ")");
+        LOGGER.info("Emit white noise of " + pinkNoiseGain + " dB (rms: " + pressure + ")");
 
         if(audioTrack != null) {
             audioTrack.pause();
@@ -564,7 +563,7 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
         audioTrack.play();
 
 
-        new Thread(new PinkNoiseFeed(this, audioTrack, rms, defaultCalibrationTime)).start();
+        new Thread(new PinkNoiseFeed(this, audioTrack, pressure, defaultCalibrationTime)).start();
     }
 
     private double dbToRms(double db) {
@@ -1004,7 +1003,7 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
             this.calibrationActivity = calibrationActivity;
             this.audioTrack = audioTrack;
             sampleBufferLength = (int)(audioTrack.getSampleRate() * maxLength);
-            signal = SOSSignalProcessing.makePinkNoise(sampleBufferLength, (short)powerRMS, 0);
+            signal = SOSSignalProcessing.makePinkNoise(sampleBufferLength, powerRMS, 0);
             bufferSize = (int)(audioTrack.getSampleRate() * 0.1);
         }
 

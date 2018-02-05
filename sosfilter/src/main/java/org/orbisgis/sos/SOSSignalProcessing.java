@@ -272,7 +272,7 @@ public class SOSSignalProcessing {
         return signal;
     }
 
-    public static short[] makePinkNoise(int samples, short rms, long seed) {
+    public static short[] makePinkNoise(int samples, double pressure, long seed) {
         // https://ccrma.stanford.edu/~jos/sasp/Example_Synthesis_1_F_Noise.html
         final double[] b = new double[] {0.049922035, -0.095993537, 0.050612699, -0.004408786};
         final double[] a = new double[] {1, -2.494956002,   2.017265875,  -0.522189400};
@@ -280,7 +280,7 @@ public class SOSSignalProcessing {
         double[] v = new double[samples + nt60];
         Random random = new Random(seed);
         for(int i=0; i < v.length; i++) {
-            v[i] = random.nextGaussian() * rms;
+            v[i] = random.nextGaussian() * pressure;
         }
         double[] x = filter(b, a, v);
         short[] signal = new short[samples];
