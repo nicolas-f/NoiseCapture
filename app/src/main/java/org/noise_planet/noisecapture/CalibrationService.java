@@ -613,14 +613,14 @@ public class CalibrationService extends Service implements PropertyChangeListene
         }
     }
 
-    private static class PinkNoiseFeed implements Runnable {
+    public static final class PinkNoiseFeed implements Runnable {
         private CalibrationService calibrationService;
         private AudioTrack audioTrack;
         private final int sampleBufferLength;
         private final short[] signal;
         private final int bufferSize;
 
-        public PinkNoiseFeed(CalibrationService calibrationService, AudioTrack audioTrack,
+        PinkNoiseFeed(CalibrationService calibrationService, AudioTrack audioTrack,
                               double powerRMS, double maxLength) {
             this.calibrationService = calibrationService;
             this.audioTrack = audioTrack;

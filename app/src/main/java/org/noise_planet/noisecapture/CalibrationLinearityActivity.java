@@ -84,7 +84,6 @@ import org.slf4j.LoggerFactory;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -101,11 +100,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CalibrationLinearityActivity extends MainActivity implements PropertyChangeListener, SharedPreferences.OnSharedPreferenceChangeListener,ViewPager.OnPageChangeListener {
     private enum CALIBRATION_STEP {IDLE, WARMUP, CALIBRATION_BACKGROUND, CALIBRATION, END}
+    public static final String CSV_FILENAME = "calibration_cache/calibration_cache/calibration.csv";
     private int splLoop = 0;
     private List<Double> splBackroundNoise = new ArrayList<>();
-    private static final double DB_STEP = 5;
+    private static final double DB_STEP = 2.5;
     private static final int MAX_SPL_LOOP = 10;
-    private double whiteNoisedB = 0;
+    private double pinkNoiseGain = 0;
     private ProgressBar progressBar_wait_calibration_recording;
     private TextView startButton;
     private TextView exportButton;
@@ -405,7 +405,8 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
     }
 
     private void onExport() {
-        File requestFile = new File(getCacheDir().getAbsolutePath() , "linear.csv");
+        File requestFile = new File(getCacheDir().getAbsolutePath() , CSV_FILENAME);
+        requestFile.getParentFile().mkdirs();
         Uri fileUri = FileProvider.getUriForFile(
                 this,
                 "org.noise_planet.noisecapture.fileprovider",
@@ -540,29 +541,30 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
 
     private void playNewTrack() {
         // Compute rms value
-        short rms = (short) Math.max(0, Math.min(Math.pow(10, AcousticIndicators.todBspl(Short
-                .MAX_VALUE / Math.sqrt(2), FFTSignalProcessing.DB_FS_REFERENCE) - (splLoop++ *
-                DB_STEP) / 10), Short.MAX_VALUE));
+        double gain =  - (splLoop++ * DB_STEP);
+        short rms = (short) Math.max(0, Math.min(Math.pow(10, (10 * Math.log10(Short
+                .MAX_VALUE) + gain) / 10), Short.MAX_VALUE));
         short[] data = SOSSignalProcessing.makePinkNoise(44100, rms, 0);
         double[] fftCenterFreq = FFTSignalProcessing.computeFFTCenterFrequency(AudioProcess.REALTIME_SAMPLE_RATE_LIMITATION);
-        FFTSignalProcessing fftSignalProcessing = new FFTSignalProcessing(44100, fftCenterFreq, 44100);
+        FFTSignalProcessing fftSignalProcessing = new FFTSignalProcessing(44100, fftCenterFreq,
+                data.length);
         fftSignalProcessing.addSample(data);
-        whiteNoisedB = fftSignalProcessing.computeGlobalLeq();
+        pinkNoiseGain = gain;
         freqLeqStats.add(new LinearCalibrationResult(fftSignalProcessing.processSample(true, false, false)));
-        LOGGER.info("Emit white noise of "+whiteNoisedB+" dB");
-        if(audioTrack == null) {
-            audioTrack = new AudioTrack(getAudioOutput(), 44100, AudioFormat.CHANNEL_OUT_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT, data.length * (Short.SIZE / 8), AudioTrack.MODE_STATIC);
-        } else {
-            try {
-                audioTrack.pause();
-                audioTrack.flush();
-            } catch (IllegalStateException ex) {
-                // Ignore
-            }
+        LOGGER.info("Emit white noise of " + pinkNoiseGain + " dB (rms: " + rms + ")");
+
+        if(audioTrack != null) {
+            audioTrack.pause();
+            audioTrack.flush();
+            audioTrack.release();
         }
-        audioTrack.setLoopPoints(0, audioTrack.write(data, 0, data.length), -1);
+        audioTrack = new AudioTrack(getAudioOutput(), audioProcess.getRate(), AudioFormat
+                .CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT, audioProcess.getRate() * (Short
+                .SIZE / Byte.SIZE), AudioTrack.MODE_STREAM);
         audioTrack.play();
+
+
+        new Thread(new PinkNoiseFeed(this, audioTrack, rms, defaultCalibrationTime)).start();
     }
 
     private double dbToRms(double db) {
@@ -797,28 +799,28 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
 
     @Override
     public void propertyChange(PropertyChangeEvent event) {
-        if((calibration_step == CALIBRATION_STEP.CALIBRATION || calibration_step == CALIBRATION_STEP.WARMUP)  &&
-                AudioProcess.PROP_DELAYED_STANDART_PROCESSING.equals(event.getPropertyName())) {
+        if ((calibration_step == CALIBRATION_STEP.CALIBRATION || calibration_step ==
+                CALIBRATION_STEP.WARMUP || calibration_step == CALIBRATION_STEP
+                .CALIBRATION_BACKGROUND) && AudioProcess.PROP_DELAYED_STANDART_PROCESSING.equals
+                (event.getPropertyName())) {
             // New leq
-            AudioProcess.AudioMeasureResult measure =
-                    (AudioProcess.AudioMeasureResult) event.getNewValue();
+            AudioProcess.AudioMeasureResult measure = (AudioProcess.AudioMeasureResult) event
+                    .getNewValue();
             final double leq;
             // Use global dB value or only the selected frequency band
             leq = measure.getGlobaldBaValue();
-            if(calibration_step == CALIBRATION_STEP.CALIBRATION) {
+            if(calibration_step == CALIBRATION_STEP.CALIBRATION || calibration_step == CALIBRATION_STEP.CALIBRATION_BACKGROUND) {
                 leqStats.addLeq(leq);
                 if(!freqLeqStats.isEmpty()) {
                     freqLeqStats.get(freqLeqStats.size() - 1).pushMeasure(measure.getResult());
-                } else {
-
                 }
             }
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     double leqToShow;
-                    if(calibration_step == CALIBRATION_STEP.CALIBRATION) {
-                        leqToShow = leqStats.getLeqMean();
+                    if(calibration_step == CALIBRATION_STEP.CALIBRATION || calibration_step == CALIBRATION_STEP.CALIBRATION_BACKGROUND) {
+                        leqToShow = leqStats.computeLeqOccurrences(null).getLa50();
                     } else {
                         leqToShow = leq;
                     }
@@ -837,7 +839,7 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
     protected void onPause() {
         super.onPause();
         if(audioTrack != null) {
-            audioTrack.stop();
+            audioTrack.pause();
         }
     }
 
@@ -865,10 +867,11 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
                 @Override
                 public void run() {
                     if (calibration_step == CALIBRATION_STEP.CALIBRATION_BACKGROUND) {
-                        freqLeqStats.add(null);
+                        freqLeqStats.add(new LinearCalibrationResult(null));
                         textStatus.setText(R.string.calibration_status_background_noise);
                     } else {
-                        textStatus.setText(getString(R.string.calibration_linear_status_on, whiteNoisedB));
+                        textStatus.setText(getString(R.string.calibration_linear_status_on,
+                                pinkNoiseGain));
                     }
                 }
             });
@@ -904,8 +907,6 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
                     });
                     recording.set(false);
                     canceled.set(true);
-                    // Stop playing sound
-                    audioTrack.stop();
                     // Activate user input
                     if(!testGainCheckBox.isChecked()) {
                         exportButton.setEnabled(true);
@@ -986,6 +987,52 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
             }
             for(int idFreq = 0; idFreq < this.measure.length; idFreq++) {
                 this.measure[idFreq].addLeq(measureLevels[idFreq]);
+            }
+        }
+    }
+
+
+    public static final class PinkNoiseFeed implements Runnable {
+        private CalibrationLinearityActivity calibrationActivity;
+        private AudioTrack audioTrack;
+        private final int sampleBufferLength;
+        private final short[] signal;
+        private final int bufferSize;
+
+        PinkNoiseFeed(CalibrationLinearityActivity calibrationActivity, AudioTrack audioTrack,
+                      double powerRMS, double maxLength) {
+            this.calibrationActivity = calibrationActivity;
+            this.audioTrack = audioTrack;
+            sampleBufferLength = (int)(audioTrack.getSampleRate() * maxLength);
+            signal = SOSSignalProcessing.makePinkNoise(sampleBufferLength, (short)powerRMS, 0);
+            bufferSize = (int)(audioTrack.getSampleRate() * 0.1);
+        }
+
+
+        @Override
+        public void run() {
+            try {
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
+            } catch (IllegalArgumentException | SecurityException ex) {
+                // Ignore
+            }
+            try {
+                int cursor = 0;
+                while((CalibrationLinearityActivity.CALIBRATION_STEP.WARMUP == calibrationActivity
+                        .calibration_step ||
+                        CalibrationLinearityActivity.CALIBRATION_STEP.CALIBRATION == calibrationActivity
+                        .calibration_step) &&
+                        !calibrationActivity.canceled.get()) {
+                    int size = Math.min(signal.length - cursor, bufferSize);
+                        audioTrack.write(Arrays.copyOfRange(signal, cursor, cursor + size), 0, size);
+                    cursor += size;
+                    if(cursor >= signal.length) {
+                        cursor = 0;
+                    }
+                }
+                audioTrack.pause();
+            } catch (IllegalStateException ex) {
+                // Ignore
             }
         }
     }
