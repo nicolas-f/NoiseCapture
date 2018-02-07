@@ -117,6 +117,7 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
     private TextView textDeviceLevel;
     private CheckBox testGainCheckBox;
     private Handler timeHandler;
+    private List<Long> startCalibrationTime = new ArrayList<>();
     private int defaultWarmupTime;
     private int defaultCalibrationTime;
     private LeqStats leqStats;
@@ -514,6 +515,21 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
     }
 
     private void onCalibrationStart() {
+        // Compute calibration times
+        startCalibrationTime.clear();
+        long begin = SystemClock.elapsedRealtime();
+        // First warmup
+        begin += defaultWarmupTime * 1000;
+        // Calibration background measurement
+        begin += defaultCalibrationTime * 1000;
+        startCalibrationTime.add(begin);
+        for(int cycle = 0; cycle < maxSplLoop; cycle++) {
+            // warmup
+            begin += defaultWarmupTime * 1000;
+            // Calibration measurement
+            begin += defaultCalibrationTime * 1000;
+            startCalibrationTime.add(begin);
+        }
         textStatus.setText(R.string.calibration_status_waiting_for_start_timer);
         calibration_step = CALIBRATION_STEP.WARMUP;
         // Link measurement service with gui
@@ -861,6 +877,13 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
         return true;
     }
 
+    /**
+     * @return The next warmup time in order to start the next calibration on time
+     */
+    private int getNextFixedWarmupTime() {
+        return (int)(startCalibrationTime.remove(0) -  SystemClock.elapsedRealtime());
+    }
+
     private void onTimerEnd() {
         if(calibration_step == CALIBRATION_STEP.WARMUP) {
             // Start calibration
@@ -868,7 +891,7 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
             if (!freqLeqStats.isEmpty()) {
                 freqLeqStats.get(freqLeqStats.size() - 1).setGlobalMeasure(leqStats);
             }
-            progressHandler.start(defaultCalibrationTime * 1000);
+            progressHandler.start(getNextFixedWarmupTime());
             if (splBackroundNoise.isEmpty()) {
                 calibration_step = CALIBRATION_STEP.CALIBRATION_BACKGROUND;
             } else {
