@@ -942,7 +942,7 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
                             playNewTrack();
                         }
                     };
-                    executorService.schedule(task, defaultWarmupTime * 500, TimeUnit.MILLISECONDS);
+                    executorService.schedule(task, defaultWarmupTime * 300, TimeUnit.MILLISECONDS);
                     progressHandler.start(defaultWarmupTime * 1000);
                 }
 
