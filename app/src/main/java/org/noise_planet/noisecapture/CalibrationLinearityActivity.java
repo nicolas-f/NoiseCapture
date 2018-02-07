@@ -32,10 +32,12 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.AssetFileDescriptor;
 import android.graphics.Color;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -83,6 +85,7 @@ import org.slf4j.LoggerFactory;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -942,6 +945,26 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
                             updateSelectedGraph();
                         }
                     });
+                    final AssetFileDescriptor afd = getResources().openRawResourceFd(R.raw.endofcalibration);
+                    final FileDescriptor fileDescriptor = afd.getFileDescriptor();
+                    // Play end of calibration
+                    Runnable runnable = new Runnable() {
+                        @Override
+                        public void run() {
+                            MediaPlayer player = new MediaPlayer();
+                            try {
+
+                                player.setDataSource(fileDescriptor, afd.getStartOffset(),
+                                        afd.getLength());
+                                player.setLooping(false);
+                                player.prepare();
+                                player.start();
+                            } catch (IOException ex) {
+                                LOGGER.error(ex.getLocalizedMessage(), ex);
+                            }
+                        }
+                    };
+                    executorService.schedule(runnable, 4, TimeUnit.SECONDS);
                     recording.set(false);
                     canceled.set(true);
                     // Activate user input
