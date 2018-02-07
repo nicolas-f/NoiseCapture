@@ -313,4 +313,8 @@ track.geojson 1s samples of measures. Using the geojson format (http://geojson.i
     <string name="calibration_log_send_message">Send: %s</string>
     <string name="calibration_log_receive_message">Message: %s</string>
     <string name="calibration_linear_export">Export</string>
+    <string name="title_settings_calibration_attenuation">Attenuation</string>
+    <string name="title_settings_calibration_loop">Number of calibration loop</string>
+    <string name="title_settings_calibration_loop_description">Number of calibration loop</string>
+    <string name="title_settings_calibration_attenuation_description">Attenuation in dB for each calibration loop</string>
 </resources>

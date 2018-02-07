@@ -73,7 +73,6 @@ import com.github.mikephil.charting.interfaces.datasets.IScatterDataSet;
 import com.github.mikephil.charting.utils.ColorTemplate;
 
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
-import org.orbisgis.sos.AcousticIndicators;
 import org.orbisgis.sos.FFTSignalProcessing;
 import org.orbisgis.sos.LeqStats;
 import org.orbisgis.sos.SOSSignalProcessing;
@@ -103,8 +102,8 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
     public static final String CSV_FILENAME = "calibration_cache/calibration_cache/calibration.csv";
     private int splLoop = 0;
     private List<Double> splBackroundNoise = new ArrayList<>();
-    private static final double DB_STEP = 6;
-    private static final int MAX_SPL_LOOP = 20;
+    private double dbStep = 6;
+    private int maxSplLoop = 20;
     private double pinkNoiseGain = 0;
     private ProgressBar progressBar_wait_calibration_recording;
     private TextView startButton;
@@ -136,6 +135,8 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
 
     private static final String SETTINGS_CALIBRATION_WARMUP_TIME = "settings_calibration_warmup_time";
     private static final String SETTINGS_CALIBRATION_TIME = "settings_calibration_time";
+    private static final String SETTINGS_CALIBRATION_ATTENUATION = "settings_calibration_attenuation";
+    private static final String SETTINGS_CALIBRATION_LOOP = "settings_calibration_loop";
 
     private AudioTrack audioTrack;
 
@@ -148,6 +149,8 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
         sharedPref.registerOnSharedPreferenceChangeListener(this);
         defaultCalibrationTime = getInteger(sharedPref,SETTINGS_CALIBRATION_TIME, 10);
         defaultWarmupTime = getInteger(sharedPref,SETTINGS_CALIBRATION_WARMUP_TIME, 5);
+        dbStep = getDouble(sharedPref, SETTINGS_CALIBRATION_ATTENUATION, 3);
+        maxSplLoop = getInteger(sharedPref, SETTINGS_CALIBRATION_LOOP, 20);
 
         progressBar_wait_calibration_recording = (ProgressBar) findViewById(R.id.progressBar_wait_calibration_recording);
         exportButton = (TextView) findViewById(R.id.btn_export);
@@ -480,11 +483,14 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
             defaultWarmupTime = getInteger(sharedPreferences, SETTINGS_CALIBRATION_WARMUP_TIME, 5);
         } else if("settings_recording_gain".equals(key) && audioProcess != null) {
             if(testGainCheckBox.isChecked()) {
-                SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(CalibrationLinearityActivity.this);
                 audioProcess.setGain((float)Math.pow(10, getDouble(sharedPreferences, key, 0) / 20));
             } else {
                 audioProcess.setGain(1);
             }
+        } else if(SETTINGS_CALIBRATION_LOOP.equals(key)) {
+            maxSplLoop = getInteger(sharedPreferences, SETTINGS_CALIBRATION_LOOP, 20);
+        } else if(SETTINGS_CALIBRATION_ATTENUATION.equals(key)) {
+            dbStep = getDouble(sharedPreferences, SETTINGS_CALIBRATION_ATTENUATION, 3);
         }
     }
 
@@ -541,7 +547,7 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
 
     private void playNewTrack() {
         // Compute rms value
-        double gain =  - (splLoop++ * DB_STEP);
+        double gain =  - (splLoop++ * dbStep);
         double pressure = Short.MAX_VALUE * Math.pow(10, gain / 20);
         short[] data = SOSSignalProcessing.makePinkNoise(44100, pressure, 0);
         double[] fftCenterFreq = FFTSignalProcessing.computeFFTCenterFrequency(AudioProcess.REALTIME_SAMPLE_RATE_LIMITATION);
@@ -893,7 +899,7 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
             });
         } else if(calibration_step == CALIBRATION_STEP.CALIBRATION) {
                 // If the powered calibration has been done enough times
-                if (splLoop >= MAX_SPL_LOOP) {
+                if (splLoop >= maxSplLoop) {
                     // stop calibration
                     calibration_step = CALIBRATION_STEP.END;
                     runOnUiThread(new Runnable() {

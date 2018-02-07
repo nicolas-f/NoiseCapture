@@ -93,6 +93,19 @@
             android:summary="@string/title_settings_calibration_time_description"
             android:inputType="number"/>
 
+        <EditTextPreference
+            android:defaultValue="3"
+            android:key="settings_calibration_attenuation"
+            android:title="@string/title_settings_calibration_attenuation"
+            android:summary="@string/title_settings_calibration_attenuation_description"
+            android:inputType="numberDecimal|numberSigned"/>
+
+        <EditTextPreference
+            android:defaultValue="20"
+            android:key="settings_calibration_loop"
+            android:title="@string/title_settings_calibration_loop"
+            android:summary="@string/title_settings_calibration_loop_description"
+            android:inputType="number"/>
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/title_activity_map">

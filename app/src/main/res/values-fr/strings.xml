@@ -309,4 +309,8 @@ track.geojson échantillons mesurés chaque seconde au format geojson (http://ge
     <string name="calibration_log_send_message">Send: %s</string>
     <string name="calibration_log_receive_message">Message: %s</string>
     <string name="calibration_linear_export">Export</string>
+    <string name="title_settings_calibration_attenuation">Attenuation</string>
+    <string name="title_settings_calibration_attenuation_description">Attenuation en dB pour chaque boucle de calibrage</string>
+    <string name="title_settings_calibration_loop">Nombre de boucle de calibrage</string>
+    <string name="title_settings_calibration_loop_description">Nombre de boucle de calibrage</string>
 </resources>

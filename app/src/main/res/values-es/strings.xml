@@ -309,4 +309,8 @@ track.geojson muestars de 1 s de las mediciones en formato GeoJSON (http://geojs
     <string name="calibration_log_send_message">Send: %s</string>
     <string name="calibration_log_receive_message">%s</string>
     <string name="calibration_linear_export"/>
+    <string name="title_settings_calibration_attenuation"/>
+    <string name="title_settings_calibration_attenuation_description"/>
+    <string name="title_settings_calibration_loop"/>
+    <string name="title_settings_calibration_loop_description"/>
 </resources>

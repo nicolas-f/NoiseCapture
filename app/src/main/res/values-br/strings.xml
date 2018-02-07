@@ -313,4 +313,8 @@ track.geojson 1s samples of measures. Using the geojson format (http://geojson.i
     <string name="calibration_log_send_message">Kaset: %s</string>
     <string name="calibration_log_receive_message">Gerig: %s</string>
     <string name="calibration_linear_export"/>
+    <string name="title_settings_calibration_attenuation"/>
+    <string name="title_settings_calibration_attenuation_description"/>
+    <string name="title_settings_calibration_loop"/>
+    <string name="title_settings_calibration_loop_description"/>
 </resources>
