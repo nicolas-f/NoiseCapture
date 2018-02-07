@@ -94,6 +94,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
@@ -119,6 +122,8 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
     private LeqStats leqStats;
     private List<LinearCalibrationResult> freqLeqStats = new ArrayList<>();
     private TabLayout tabLayout;
+    private ScheduledExecutorService executorService = Executors
+            .newSingleThreadScheduledExecutor();
 
     private AudioProcess audioProcess;
     private AtomicBoolean recording = new AtomicBoolean(true);
@@ -569,7 +574,8 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
         audioTrack.play();
 
 
-        new Thread(new PinkNoiseFeed(this, audioTrack, pressure, defaultCalibrationTime)).start();
+        new Thread(new PinkNoiseFeed(this, audioTrack, pressure, defaultCalibrationTime + defaultWarmupTime))
+                .start();
     }
 
     private double dbToRms(double db) {
@@ -883,11 +889,11 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
         } else if(calibration_step == CALIBRATION_STEP.CALIBRATION_BACKGROUND) {
             // End of calibration of background noise
             calibration_step = CALIBRATION_STEP.WARMUP;
-            playNewTrack();
             for(LeqStats leqStats : freqLeqStats.get(0).measure) {
                 splBackroundNoise.add(leqStats.computeLeqOccurrences(null).getLa50());
             }
             freqLeqStats.clear();
+            playNewTrack();
             progressHandler.start(defaultWarmupTime * 1000);
             runOnUiThread(new Runnable() {
                 @Override
@@ -902,6 +908,9 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
                 if (splLoop >= maxSplLoop) {
                     // stop calibration
                     calibration_step = CALIBRATION_STEP.END;
+                    if (!freqLeqStats.isEmpty()) {
+                        freqLeqStats.get(freqLeqStats.size() - 1).setGlobalMeasure(leqStats);
+                    }
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -913,9 +922,7 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
                     recording.set(false);
                     canceled.set(true);
                     // Activate user input
-                    if(!testGainCheckBox.isChecked()) {
-                        exportButton.setEnabled(true);
-                    }
+                    exportButton.setEnabled(true);
                     resetButton.setEnabled(true);
                 } else {
                     calibration_step = CALIBRATION_STEP.WARMUP;
@@ -927,7 +934,15 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
                             updateSelectedGraph();
                         }
                     });
-                    playNewTrack();
+                    // Stop playing old pink noise and start playing new pink noise on the middle
+                    // of the new warmup
+                    Runnable task = new Runnable() {
+                        @Override
+                        public void run() {
+                            playNewTrack();
+                        }
+                    };
+                    executorService.schedule(task, defaultWarmupTime * 500, TimeUnit.MILLISECONDS);
                     progressHandler.start(defaultWarmupTime * 1000);
                 }
 
