@@ -103,7 +103,7 @@ public class CalibrationLinearityActivity extends MainActivity implements Proper
     public static final String CSV_FILENAME = "calibration_cache/calibration_cache/calibration.csv";
     private int splLoop = 0;
     private List<Double> splBackroundNoise = new ArrayList<>();
-    private static final double DB_STEP = 3;
+    private static final double DB_STEP = 6;
     private static final int MAX_SPL_LOOP = 20;
     private double pinkNoiseGain = 0;
     private ProgressBar progressBar_wait_calibration_recording;
