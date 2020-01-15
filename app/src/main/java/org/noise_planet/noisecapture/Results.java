@@ -48,6 +48,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.charts.PieChart;
 import com.github.mikephil.charting.components.Legend;
 import com.github.mikephil.charting.components.Legend.LegendPosition;
@@ -58,12 +59,15 @@ import com.github.mikephil.charting.data.BarData;
 import com.github.mikephil.charting.data.BarDataSet;
 import com.github.mikephil.charting.data.BarEntry;
 import com.github.mikephil.charting.data.Entry;
+import com.github.mikephil.charting.data.LineData;
+import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.data.PieData;
 import com.github.mikephil.charting.data.PieDataSet;
 import com.github.mikephil.charting.formatter.PercentFormatter;
 import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.github.mikephil.charting.highlight.Highlight;
 import com.github.mikephil.charting.interfaces.datasets.IBarDataSet;
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import com.github.mikephil.charting.utils.ViewPortHandler;
 import com.nhaarman.supertooltips.ToolTip;
 import com.nhaarman.supertooltips.ToolTipRelativeLayout;
@@ -71,6 +75,7 @@ import com.nhaarman.supertooltips.ToolTipView;
 
 import org.noise_planet.noisecapture.util.CustomPercentFormatter;
 import org.orbisgis.sos.LeqStats;
+import org.orbisgis.sos.ThirdOctaveFrequencies;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -96,12 +101,11 @@ public class Results extends MainActivity {
     // For the Charts
     public PieChart rneChart;
     public PieChart neiChart;
-    protected BarChart sChart; // Spectrum representation
+    protected LineChart sChart; // NoiseLevel representation
 
     // Other ressources
-    private String[] ltob;  // List of third-octave bands
     private String[] catNE; // List of noise level category (defined as ressources)
-    private List<Float> splHistogram;
+    private List<Float> splLAeq = new ArrayList<>();
     private LeqStats leqStats = new LeqStats();
     private List<String> tags;
 
@@ -153,7 +157,7 @@ public class Results extends MainActivity {
         lnei.setEnabled(false);
 
         // Cumulated spectrum
-        sChart = (BarChart) findViewById(R.id.spectrumChart);
+        sChart = findViewById(R.id.levelChart);
         initSpectrumChart();
         Legend ls = sChart.getLegend();
         ls.setEnabled(false); // Hide legend
@@ -327,23 +331,20 @@ public class Results extends MainActivity {
     public void initSpectrumChart(){
         sChart.setPinchZoom(false);
         sChart.setDoubleTapToZoomEnabled(false);
-        sChart.setDrawBarShadow(false);
         sChart.setDescription("");
         sChart.setPinchZoom(false);
         sChart.setDrawGridBackground(false);
         sChart.setHighlightPerTapEnabled(true);
         sChart.setHighlightPerDragEnabled(false);
-        sChart.setDrawHighlightArrow(true);
-        sChart.setDrawValueAboveBar(true);
         // XAxis parameters: hide all
-        XAxis xls = sChart.getXAxis();
-        xls.setPosition(XAxisPosition.BOTTOM);
-        xls.setDrawAxisLine(true);
-        xls.setDrawGridLines(false);
-        xls.setLabelRotationAngle(-90);
-        xls.setDrawLabels(true);
-        xls.setTextColor(Color.WHITE);
-        xls.setLabelsToSkip(0);
+        XAxis xl = sChart.getXAxis();
+        xl.setDrawGridLines(false);
+        xl.setTextColor(Color.WHITE);
+        xl.setGridColor(Color.WHITE);
+        xl.setPosition(XAxis.XAxisPosition.BOTTOM);
+        xl.setDrawAxisLine(true);
+        xl.setLabelRotationAngle(-90);
+        xl.setDrawLabels(true);
         // YAxis parameters (left): main axis for dB values representation
         YAxis yls = sChart.getAxisLeft();
         yls.setDrawAxisLine(true);
@@ -360,33 +361,37 @@ public class Results extends MainActivity {
 
 
 
-    // Read spl data for spectrum representation
+    // Read spl data for level representation
     private void setDataS() {
 
-        ArrayList<String> xVals = new ArrayList<String>();
-        Collections.addAll(xVals, ltob);
+        ArrayList<Entry> yMeasure = new ArrayList<Entry>();
 
 
-        ArrayList<BarEntry> yVals1 = new ArrayList<BarEntry>();
+        ArrayList<ILineDataSet> dataSets = new ArrayList<ILineDataSet>();
 
-        for (int i = 0; i < splHistogram.size(); i++) {
-            yVals1.add(new BarEntry(splHistogram.get(i), i));
+
+        List<String> xVals = new ArrayList<>(yMeasure.size());
+
+        for (int i = 0; i < splLAeq.size(); i++) {
+            yMeasure.add(new Entry(splLAeq.get(i), i));
+            xVals.add(String.valueOf(i));
+            getString(R.string.history_length, i);
         }
 
-        BarDataSet set1 = new BarDataSet(yVals1, "DataSet");
-        set1.setValueTextColor(Color.WHITE);
+        LineDataSet freqSet = new LineDataSet(yMeasure, getString(R.string.measurement_dba_mean));
 
-        set1.setColors(
-                new int[]{Color.rgb(0, 128, 255), Color.rgb(0, 128, 255), Color.rgb(0, 128, 255),
-                        Color.rgb(102, 178, 255), Color.rgb(102, 178, 255),
-                        Color.rgb(102, 178, 255)});
+        freqSet.setDrawValues(false);
+        freqSet.setDrawCircles(true);
+        freqSet.setMode(LineDataSet.Mode.LINEAR);
 
-        ArrayList<IBarDataSet> dataSets = new ArrayList<IBarDataSet>();
-        dataSets.add(set1);
+        dataSets.add(freqSet);
 
-        BarData data = new BarData(xVals, dataSets);
-        data.setValueTextSize(10f);
-        data.setValueFormatter(new FreqValueFormater(sChart));
+
+
+
+        // create a data object with the datasets
+        LineData data = new LineData(xVals, dataSets);
+
         sChart.setData(data);
         sChart.invalidate();
     }
@@ -648,29 +653,16 @@ public class Results extends MainActivity {
             activity.measurementManager.getRecordLeqs(activity.record.getId(), frequencies, leqValues, new
                     ReadRecordsProgression(activity));
 
-            // Create leq statistics by frequency
-            LeqStats[] leqStatsByFreq = new LeqStats[frequencies.size()];
-            for(int idFreq = 0; idFreq < leqStatsByFreq.length; idFreq++) {
-                leqStatsByFreq[idFreq] = new LeqStats();
-            }
+            activity.splLAeq.clear();
+
             // parse each leq window time
             for(Float[] leqFreqs : leqValues) {
                 double rms = 0;
-                int idFreq = 0;
                 for(float leqValue : leqFreqs) {
-                    leqStatsByFreq[idFreq].addLeq(leqValue);
                     rms += Math.pow(10, leqValue / 10);
-                    idFreq++;
                 }
                 activity.leqStats.addLeq(10 * Math.log10(rms));
-            }
-            activity.splHistogram = new ArrayList<>(leqStatsByFreq.length);
-            activity.ltob = new String[leqStatsByFreq.length];
-            int idFreq = 0;
-            for (LeqStats aLeqStatsByFreq : leqStatsByFreq) {
-                activity.ltob[idFreq] = Spectrogram.formatFrequency(frequencies.get(idFreq));
-                activity.splHistogram.add((float) aLeqStatsByFreq.getLeqMean());
-                idFreq++;
+                activity.splLAeq.add((float)(10 * Math.log10(rms)));
             }
 
             final LeqStats.LeqOccurrences leqOccurrences = activity.leqStats.computeLeqOccurrences
