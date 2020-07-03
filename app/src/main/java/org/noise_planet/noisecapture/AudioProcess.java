@@ -108,7 +108,7 @@ public class AudioProcess implements Runnable {
                         // Take a higher buffer size in order to get a smooth recording under load
                         // avoiding Buffer overflow error on AudioRecord side.
                         bufferSize = Math.max(tryBufferSize,
-                                (int)(AcousticIndicators.TIMEPERIOD_FAST * tryRate));
+                                Short.BYTES * 2048);
                         encoding = tryEncoding;
                         audioChannel = tryAudioChannel;
                         rate = tryRate;

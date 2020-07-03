@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>jwarble</artifactId>
+    <artifactId>qrtone</artifactId>
     <parent>
-        <artifactId>openwarble-parent</artifactId>
+        <artifactId>qrtone-parent</artifactId>
         <groupId>org.noise-planet</groupId>
-        <version>0.2.3</version>
+        <version>0.3.0</version>
         <relativePath>../</relativePath>
     </parent>
 
@@ -24,6 +24,12 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-math3</artifactId>
             <version>3.6.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.axet</groupId>
+            <artifactId>TarsosDSP</artifactId>
+            <version>2.4-1</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

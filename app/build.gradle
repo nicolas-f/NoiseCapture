@@ -24,8 +24,8 @@ android {
         applicationId "org.noise_planet.noisecapture"
         minSdkVersion 15
         targetSdkVersion 28
-        versionCode 50
-        versionName "1.2.14"
+        versionCode 51
+        versionName "1.2.15"
         // Store build date in apk
         buildConfigField "long", "TIMESTAMP", System.currentTimeMillis() + "L"
         buildConfigField "String", "GITHASH", "\"${getCheckedOutGitCommitHash().toString()}\""
@@ -100,7 +100,7 @@ repositories {
 dependencies {
     implementation 'com.github.PhilJay:MPAndroidChart:v2.2.5'
     implementation 'org.slf4j:slf4j-simple:1.7.12'
-    implementation name: 'org/noise-planet/jwarble/0.2.3/jwarble-0.2.3'
+    implementation name: 'org/noise-planet/qrtone/0.3.0/qrtone-0.3.0'
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.10'
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.9.10'
 

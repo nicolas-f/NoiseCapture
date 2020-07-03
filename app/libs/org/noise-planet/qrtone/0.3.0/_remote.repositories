@@ -1,0 +1,6 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Thu Jul 02 14:37:07 CEST 2020
+qrtone-0.3.0.jar>=
+qrtone-0.3.0-javadoc.jar>=
+qrtone-0.3.0.pom>=
+qrtone-0.3.0-sources.jar>=
