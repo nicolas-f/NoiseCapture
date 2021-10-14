@@ -43,9 +43,9 @@ import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import androidx.annotation.Nullable;
 
-import org.noise_planet.jwarble.Configuration;
-import org.noise_planet.jwarble.MessageCallback;
-import org.noise_planet.jwarble.OpenWarble;
+import org.noise_planet.qrtone.Configuration;
+import org.noise_planet.qrtone.QRTone;
+import org.noise_planet.qrtone.TriggerAnalyzer;
 import org.orbisgis.sos.LeqStats;
 import org.orbisgis.sos.SOSSignalProcessing;
 import org.orbisgis.sos.ThirdOctaveBandsFiltering;
@@ -66,7 +66,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * phone GUI is in sleep mode.
  */
 public class CalibrationService extends Service implements PropertyChangeListener,
-        SharedPreferences.OnSharedPreferenceChangeListener, MessageCallback {
+        SharedPreferences.OnSharedPreferenceChangeListener, TriggerAnalyzer.TriggerCallback {
     public static final String EXTRA_HOST = "MODE_HOST";
 
 
@@ -75,7 +75,7 @@ public class CalibrationService extends Service implements PropertyChangeListene
     private static final int FREQ_START = 10;
 
     private static final double PINK_POWER = Short.MAX_VALUE;
-    private static final double MESSAGE_RMS = Short.MAX_VALUE * 3.0/4.0;
+    private static final double MESSAGE_RMS = Short.MAX_VALUE * 1.0/4.0;
 
     // properties
     public static final String PROP_CALIBRATION_STATE = "PROP_CALIBRATION_STATE";
@@ -105,7 +105,7 @@ public class CalibrationService extends Service implements PropertyChangeListene
 
     private Handler timeHandler;
     private AudioTrack audioTrack;
-    private OpenWarble acousticModem;
+    private QRTone acousticModem;
 
     public enum CALIBRATION_STATE {
         AWAITING_START,                // Awaiting signal for start of warmup
@@ -166,15 +166,11 @@ public class CalibrationService extends Service implements PropertyChangeListene
             audioProcess.getListeners().addPropertyChangeListener(this);
 
             // Init audio modem
-            Configuration configuration = new Configuration(PAYLOAD_SIZE, audioProcess.getRate(),
-                    Configuration.DEFAULT_AUDIBLE_FIRST_FREQUENCY, 0,
-                    Configuration.MULT_SEMITONE, 0.120, 0,
-                    Configuration.DEFAULT_TRIGGER_SNR, Configuration.DEFAULT_DOOR_PEAK_RATIO,
-                    true);
+            Configuration configuration = Configuration.getAudible(audioProcess.getRate());
 
-            acousticModem = new OpenWarble(configuration);
+            acousticModem = new QRTone(configuration);
 
-            acousticModem.setCallback(this);
+            acousticModem.setTriggerCallback(this);
 
             acousticModemListener.setAcousticModem(acousticModem);
 
@@ -190,18 +186,16 @@ public class CalibrationService extends Service implements PropertyChangeListene
     }
 
     @Override
-    public void onNewMessage(byte[] bytes, long l) {
-        onNewMessage(bytes);
+    public void onNewLevels(TriggerAnalyzer triggerAnalyzer, long location, double[] spl) {
+
     }
 
     @Override
-    public void onPitch(long l) {
-        listeners.firePropertyChange(PROP_CALIBRATION_RECEIVE_PITCH, null, l / acousticModem.getConfiguration().sampleRate);
-    }
+    public void onTrigger(TriggerAnalyzer triggerAnalyzer, long messageStartLocation) {
+        listeners.firePropertyChange(PROP_CALIBRATION_RECEIVE_PITCH, null, messageStartLocation / acousticModem.getConfiguration().sampleRate);
 
-    @Override
-    public void onError(long l) {
-        listeners.firePropertyChange(PROP_CALIBRATION_RECEIVE_ERROR, null, l / acousticModem.getConfiguration().sampleRate);
+        // TODO error
+        // listeners.firePropertyChange(PROP_CALIBRATION_RECEIVE_ERROR, null, l / acousticModem.getConfiguration().sampleRate);
     }
 
     /**
@@ -276,14 +270,14 @@ public class CalibrationService extends Service implements PropertyChangeListene
     }
 
     private void playMessage(byte[] data) {
-        double[] signalDouble = acousticModem.generateSignal(1.0, data);
-        double maxValue = Double.MIN_VALUE;
-        for(int i = 0; i < signalDouble.length; i++) {
-            maxValue = Math.max(signalDouble[i], maxValue);
-        }
-        short[] signal = new short[signalDouble.length];
-        for(int i = 0; i < signalDouble.length; i++) {
-            signal[i] = (short)Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, (signalDouble[i] / maxValue) * MESSAGE_RMS));
+        float waitingTime = 0.30f;
+        int waitingSamples = (int)(waitingTime * acousticModem.getConfiguration().sampleRate);
+        int sampleLength = acousticModem.setPayload(data);
+        float[] signalFloat = new float[sampleLength];
+        acousticModem.getSamples(signalFloat, 0, MESSAGE_RMS);
+        short[] signal = new short[waitingSamples + sampleLength + waitingSamples];
+        for(int i = 0; i < sampleLength; i++) {
+            signal[i + waitingSamples] = (short)Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, signalFloat[i]));
         }
         playAudio(signal, 1);
     }
@@ -562,7 +556,7 @@ public class CalibrationService extends Service implements PropertyChangeListene
         private final CalibrationService calibrationService;
         private final AtomicBoolean canceled;
         private final AtomicBoolean recording;
-        private OpenWarble openWarble;
+        private QRTone qrTone;
         private Queue<short[]> bufferToProcess = new ConcurrentLinkedQueue<short[]>();
 
         public AcousticModemListener(CalibrationService calibrationService, AtomicBoolean
@@ -572,8 +566,8 @@ public class CalibrationService extends Service implements PropertyChangeListene
             this.recording = recording;
         }
 
-        public void setAcousticModem(OpenWarble openWarble) {
-            this.openWarble = openWarble;
+        public void setAcousticModem(QRTone qrTone) {
+            this.qrTone = qrTone;
         }
 
         @Override
@@ -585,20 +579,19 @@ public class CalibrationService extends Service implements PropertyChangeListene
 
         @Override
         public void run() {
-            while (!canceled.get() && openWarble != null) {
+            while (!canceled.get() && qrTone != null) {
                 while(!bufferToProcess.isEmpty()) {
                     short[] buffer = bufferToProcess.poll();
                     if(buffer != null) {
                         boolean doProcessBuffer = true;
                         while(doProcessBuffer) {
                             doProcessBuffer = false;
-                            double[] samples = new double[Math.min(buffer.length, openWarble.getMaxPushSamplesLength())];
-                            for (int i = 0; i < samples.length; i++) {
-                                samples[i] = buffer[i] / (double)Short.MAX_VALUE;
+                            short[] bufferPart = Arrays.copyOfRange(buffer, 0, Math.min(buffer.length, qrTone.getMaximumWindowLength()));
+                            if(qrTone.pushSamples(bufferPart)) {
+                                calibrationService.onNewMessage(qrTone.getPayload());
                             }
-                            openWarble.pushSamples(samples);
-                            if (buffer.length > samples.length) {
-                                buffer = Arrays.copyOfRange(buffer, samples.length, buffer.length);
+                            if (buffer.length > bufferPart.length) {
+                                buffer = Arrays.copyOfRange(buffer, bufferPart.length, buffer.length);
                                 doProcessBuffer = true;
                             }
                         }
@@ -612,6 +605,7 @@ public class CalibrationService extends Service implements PropertyChangeListene
             }
         }
     }
+
 
     private static class PinkNoiseFeed implements Runnable {
         private CalibrationService calibrationService;
