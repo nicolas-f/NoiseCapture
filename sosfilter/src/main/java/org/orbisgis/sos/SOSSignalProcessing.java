@@ -28,10 +28,12 @@
 package org.orbisgis.sos;
 
 import java.io.BufferedWriter;
+import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
@@ -144,6 +146,17 @@ public class SOSSignalProcessing {
      */
     public static double[] convertBytesToDouble(byte[] buffer, int length, ByteOrder byteOrder) {
         return convertShortToDouble(convertBytesToShort(buffer, length, byteOrder));
+    }
+
+    public static void writeShortStream(OutputStream outputStream, short[] samples, ByteOrder byteOrder) throws IOException {
+        byte[] buffer = new byte[Short.SIZE / Byte.SIZE];
+        ShortBuffer byteBuffer = ByteBuffer.wrap(buffer).order(byteOrder).asShortBuffer();
+        for(short sample: samples) {
+            byteBuffer.clear();
+            byteBuffer.put(sample);
+            outputStream.write(buffer);
+        }
+
     }
 
     public static short[] loadShortStream(InputStream inputStream, ByteOrder byteOrder) throws IOException {
