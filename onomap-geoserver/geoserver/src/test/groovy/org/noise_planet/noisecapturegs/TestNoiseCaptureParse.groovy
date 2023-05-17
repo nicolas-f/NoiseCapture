@@ -52,7 +52,9 @@ class TestNoiseCaptureParse  extends JdbcTestCase {
         super.setUp()
         Statement st = connection.createStatement()
         // Init schema
-        st.execute(new File(TestNoiseCaptureParse.class.getResource("inith2.sql").getFile()).text)
+        st.execute(new File(TestNoiseCaptureParse.class.getResource("init_h2gis_start.sql").getFile()).text)
+        st.execute(new File(TestNoiseCaptureParse.class.getResource("init_db.sql").getFile()).text)
+        st.execute(new File(TestNoiseCaptureParse.class.getResource("init_h2gis_end.sql").getFile()).text)
     }
 
     void testParse1() {

@@ -1,0 +1,31 @@
+# docker-compose build
+version: '3.9'
+volumes:
+  postgis-data:
+    driver: local
+
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    volumes:
+      - postgis-data:/var/lib/postgresql/data
+      - ./:/data
+    environment:
+      # If you need to create multiple database you can add coma separated databases eg gis,data
+      - POSTGRES_DB=noisecapture
+    ports:
+      - 5432:5432
+    restart: on-failure
+    command: >
+      bash -c '
+        if [ x${POSTGRES_USER} == x ]; then
+          echo "Set the POSTGRES_USER environment variable in the .env file";
+          exit 1;
+        elif [ x${POSTGRES_PASSWORD} == x ]; then
+          echo "Set the POSTGRES_PASSWORD environment variable in the .env file";
+          exit 1;
+        fi;
+        '
+    exec: /usr/lib/postgresql/15/bin/psql -p 5432 -U postgres -d noisecapture -f onomap-geoserver/geoserver/src/test/resources/org/noise_planet/noisecapturegs/init_db.sql
+
+

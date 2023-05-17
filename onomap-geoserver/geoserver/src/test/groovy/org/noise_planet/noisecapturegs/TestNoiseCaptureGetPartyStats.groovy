@@ -43,7 +43,9 @@ class TestNoiseCaptureGetPartyStats extends JdbcTestCase {
         super.setUp()
         Statement st = connection.createStatement()
         // Init schema
-        st.execute(new File(TestNoiseCaptureGetPartyStats.class.getResource("inith2.sql").getFile()).text)
+        st.execute(new File(TestNoiseCaptureGetPartyStats.class.getResource("init_h2gis_start.sql").getFile()).text)
+        st.execute(new File(TestNoiseCaptureGetPartyStats.class.getResource("init_db.sql").getFile()).text)
+        st.execute(new File(TestNoiseCaptureGetPartyStats.class.getResource("init_h2gis_end.sql").getFile()).text)
         // Load timezone file
         st.execute("CALL FILE_TABLE('"+TestNoiseCaptureGetPartyStats.getResource("tz_world.shp").file+"', 'TZ_WORLD');")
         st.execute("CREATE SPATIAL INDEX ON TZ_WORLD(THE_GEOM)")
